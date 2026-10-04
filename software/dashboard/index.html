@@ -41,6 +41,18 @@
   .zonename { font-weight: bold; letter-spacing: 1px; }
   .insights { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 18px 14px 36px; }
   .insights li { padding: 6px 0; line-height: 1.4; }
+  .floor { position: relative; background: #111c33; border: 2px solid #475569; border-radius: 12px; padding: 16px 16px 64px; }
+  .zonemap { display: flex; gap: 12px; }
+  .zone { flex: 1; min-height: 150px; border-radius: 10px; padding: 14px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.2); transition: background 0.6s; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .zone .zname { font-weight: bold; letter-spacing: 1px; }
+  .zone .znum { font-size: 34px; font-weight: bold; }
+  .zone .zsub { font-size: 13px; }
+  .doors { position: absolute; bottom: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; }
+  .door { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 6px; }
+  .door.in { background: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
+  .door.out { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+  .legend { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
+  .legendbar { height: 10px; width: 180px; border-radius: 5px; background: linear-gradient(90deg, hsl(210,70%,35%), hsl(142,75%,40%), hsl(75,80%,45%), hsl(5,85%,50%)); }
 </style>
 </head>
 <body>
@@ -62,6 +74,18 @@
     <div class="card"><div class="big" id="inside">0</div><div class="label">Currently inside</div></div>
     <div class="card"><div class="big" id="storedwell">-</div><div class="label">Avg time in store</div></div>
   </div>
+  <h2>Store layout heatmap</h2>
+  <div class="floor">
+    <div class="zonemap" id="zonemap"></div>
+    <div class="doors">
+      <div class="door in">ENTRANCE · <span id="doorIn">0</span> in</div>
+      <div class="door out">EXIT · <span id="doorOut">0</span> out</div>
+    </div>
+  </div>
+  <div class="legend">
+    <span>Quiet</span><div class="legendbar"></div><span>Busiest</span>
+    <span>(zones are compared with each other, by number of visits)</span>
+  </div>
   <h2>Zones</h2>
   <div class="row" id="zones"></div>
   <h2>Zone insights</h2>
@@ -75,6 +99,7 @@
 <script>
   let selectedDay = null;
   const dayInput = document.getElementById("day");
+  const MAP_ORDER = ["grocery", "snacks", "freezer"];
 
   function todayString() {
     return new Date().toLocaleDateString("en-CA");
@@ -86,6 +111,11 @@
     return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
   }
 
+  function heatColor(t) {
+    const hue = 210 - 205 * t;
+    return "hsl(" + hue + ", " + (70 + 15 * t) + "%, " + (35 + 15 * t) + "%)";
+  }
+
   dayInput.addEventListener("change", () => {
     selectedDay = dayInput.value && dayInput.value !== todayString() ? dayInput.value : null;
     refresh();
@@ -95,6 +125,36 @@
     selectedDay = null;
     refresh();
   });
+
+  function renderHeatmap(stats, analytics) {
+    const map = document.getElementById("zonemap");
+    map.textContent = "";
+    const maxVisits = Math.max(1, ...MAP_ORDER.map(n => stats.zones[n].visits));
+    for (const name of MAP_ORDER) {
+      const z = stats.zones[name];
+      const a = analytics.zones[name];
+      const block = document.createElement("div");
+      block.className = "zone";
+      block.style.background = z.visits === 0 ? "#1e293b" : heatColor(z.visits / maxVisits);
+
+      const title = document.createElement("div");
+      title.className = "zname";
+      title.textContent = name.toUpperCase();
+
+      const num = document.createElement("div");
+      num.className = "znum";
+      num.textContent = z.visits + " visits";
+
+      const sub = document.createElement("div");
+      sub.className = "zsub";
+      sub.textContent = z.inside + " inside now · avg stay " + formatDuration(a.avg_dwell_seconds);
+
+      block.append(title, num, sub);
+      map.appendChild(block);
+    }
+    document.getElementById("doorIn").textContent = stats.entered;
+    document.getElementById("doorOut").textContent = stats.exited;
+  }
 
   function renderHourly(data) {
     const chart = document.getElementById("chart");
@@ -185,6 +245,7 @@
 
       const analytics = await (await fetch("/analytics?" + dayQuery)).json();
       document.getElementById("storedwell").textContent = formatDuration(analytics.store.avg_dwell_seconds);
+      renderHeatmap(stats, analytics);
       renderZones(stats, analytics);
       renderInsights(analytics.insights);
 
