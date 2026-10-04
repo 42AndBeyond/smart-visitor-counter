@@ -19,6 +19,15 @@
   .snacks { border-left: 5px solid #f97316; }
   .freezer { border-left: 5px solid #06b6d4; }
   #status { float: right; font-size: 13px; color: #10b981; }
+  .feed { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 6px 18px; }
+  .event { display: flex; gap: 14px; padding: 9px 0; border-bottom: 1px solid #334155; font-size: 14px; }
+  .event:last-child { border-bottom: none; }
+  .event .time { color: #94a3b8; width: 70px; }
+  .event .tag { font-weight: bold; width: 110px; }
+  .ENTRY { color: #10b981; }
+  .EXIT { color: #ef4444; }
+  .ZONE_ENTER { color: #3b82f6; }
+  .ZONE_LEAVE { color: #f97316; }
 </style>
 </head>
 <body>
@@ -36,6 +45,8 @@
   </div>
   <h2>Zones</h2>
   <div class="row" id="zones"></div>
+  <h2>Live events</h2>
+  <div class="feed" id="feed"></div>
 </main>
 <script>
   async function refresh() {
@@ -56,6 +67,26 @@
         </div>`;
       }
       document.getElementById("zones").innerHTML = html;
+
+      const evRes = await fetch("/events?limit=10");
+      const events = await evRes.json();
+      const feed = document.getElementById("feed");
+      feed.textContent = "";
+      for (const e of events) {
+        const row = document.createElement("div");
+        row.className = "event";
+        const t = document.createElement("span");
+        t.className = "time";
+        t.textContent = e.time.slice(11, 19);
+        const tag = document.createElement("span");
+        tag.className = "tag " + e.type;
+        tag.textContent = e.type;
+        const where = document.createElement("span");
+        where.textContent = e.zone;
+        row.append(t, tag, where);
+        feed.appendChild(row);
+      }
+
       status.textContent = "● live";
       status.style.color = "#10b981";
     } catch (error) {
