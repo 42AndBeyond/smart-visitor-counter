@@ -38,6 +38,9 @@
   .bar { width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; min-height: 2px; }
   .bar.peak { background: #f97316; }
   .hlabel { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+  .zonename { font-weight: bold; letter-spacing: 1px; }
+  .insights { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 18px 14px 36px; }
+  .insights li { padding: 6px 0; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -57,9 +60,12 @@
     <div class="card"><div class="big" id="entered">0</div><div class="label">Entered</div></div>
     <div class="card"><div class="big" id="exited">0</div><div class="label">Exited</div></div>
     <div class="card"><div class="big" id="inside">0</div><div class="label">Currently inside</div></div>
+    <div class="card"><div class="big" id="storedwell">-</div><div class="label">Avg time in store</div></div>
   </div>
   <h2>Zones</h2>
   <div class="row" id="zones"></div>
+  <h2>Zone insights</h2>
+  <ul class="insights" id="insights"></ul>
   <h2>Hourly visitor flow</h2>
   <div class="chart" id="chart"></div>
   <div class="label" id="peak"></div>
@@ -72,6 +78,12 @@
 
   function todayString() {
     return new Date().toLocaleDateString("en-CA");
+  }
+
+  function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined) return "-";
+    if (seconds < 60) return Math.round(seconds) + "s";
+    return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
   }
 
   dayInput.addEventListener("change", () => {
@@ -115,6 +127,45 @@
     }
   }
 
+  function renderZones(stats, analytics) {
+    const zones = document.getElementById("zones");
+    zones.textContent = "";
+    for (const [name, z] of Object.entries(stats.zones)) {
+      const a = analytics.zones[name];
+      const card = document.createElement("div");
+      card.className = "card " + name;
+
+      const title = document.createElement("div");
+      title.className = "label zonename";
+      title.textContent = name.toUpperCase();
+
+      const big = document.createElement("div");
+      big.className = "big";
+      big.textContent = z.inside;
+
+      const line1 = document.createElement("div");
+      line1.className = "label";
+      line1.textContent = "inside now · " + z.visits + " visits (" + a.share_percent + "%)";
+
+      const line2 = document.createElement("div");
+      line2.className = "label";
+      line2.textContent = "avg stay: " + formatDuration(a.avg_dwell_seconds);
+
+      card.append(title, big, line1, line2);
+      zones.appendChild(card);
+    }
+  }
+
+  function renderInsights(list) {
+    const ul = document.getElementById("insights");
+    ul.textContent = "";
+    for (const text of list) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      ul.appendChild(li);
+    }
+  }
+
   async function refresh() {
     const status = document.getElementById("status");
     const dayQuery = selectedDay ? "day=" + selectedDay : "";
@@ -127,27 +178,19 @@
         document.getElementById("mode").textContent = "Showing history for " + selectedDay;
       }
 
-      const res = await fetch("/stats?" + dayQuery);
-      const data = await res.json();
-      document.getElementById("entered").textContent = data.entered;
-      document.getElementById("exited").textContent = data.exited;
-      document.getElementById("inside").textContent = data.inside;
+      const stats = await (await fetch("/stats?" + dayQuery)).json();
+      document.getElementById("entered").textContent = stats.entered;
+      document.getElementById("exited").textContent = stats.exited;
+      document.getElementById("inside").textContent = stats.inside;
 
-      let html = "";
-      for (const [name, z] of Object.entries(data.zones)) {
-        html += `<div class="card ${name}">
-          <div class="label">${name.toUpperCase()}</div>
-          <div class="big">${z.inside}</div>
-          <div class="label">inside now · ${z.visits} visits</div>
-        </div>`;
-      }
-      document.getElementById("zones").innerHTML = html;
+      const analytics = await (await fetch("/analytics?" + dayQuery)).json();
+      document.getElementById("storedwell").textContent = formatDuration(analytics.store.avg_dwell_seconds);
+      renderZones(stats, analytics);
+      renderInsights(analytics.insights);
 
-      const hourlyRes = await fetch("/hourly?" + dayQuery);
-      renderHourly(await hourlyRes.json());
+      renderHourly(await (await fetch("/hourly?" + dayQuery)).json());
 
-      const evRes = await fetch("/events?limit=10&" + dayQuery);
-      const events = await evRes.json();
+      const events = await (await fetch("/events?limit=10&" + dayQuery)).json();
       const feed = document.getElementById("feed");
       feed.textContent = "";
       for (const e of events) {
