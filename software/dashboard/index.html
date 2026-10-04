@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Visitor Counter</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
+  header { padding: 20px 32px; border-bottom: 1px solid #1e293b; }
+  header small { color: #3b82f6; font-weight: bold; letter-spacing: 1px; }
+  header h1 { margin: 4px 0 0; font-size: 26px; }
+  main { padding: 24px 32px; max-width: 1000px; }
+  h2 { font-size: 13px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin: 28px 0 12px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { flex: 1; min-width: 180px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
+  .big { font-size: 42px; font-weight: bold; }
+  .label { color: #94a3b8; margin-top: 4px; }
+  .grocery { border-left: 5px solid #10b981; }
+  .snacks { border-left: 5px solid #f97316; }
+  .freezer { border-left: 5px solid #06b6d4; }
+  #status { float: right; font-size: 13px; color: #10b981; }
+</style>
+</head>
+<body>
+<header>
+  <small>SMART STORE TELEMETRY</small>
+  <span id="status">connecting...</span>
+  <h1>Smart Visitor Counter</h1>
+</header>
+<main>
+  <h2>Overall</h2>
+  <div class="row">
+    <div class="card"><div class="big" id="entered">0</div><div class="label">Entered</div></div>
+    <div class="card"><div class="big" id="exited">0</div><div class="label">Exited</div></div>
+    <div class="card"><div class="big" id="inside">0</div><div class="label">Currently inside</div></div>
+  </div>
+  <h2>Zones</h2>
+  <div class="row" id="zones"></div>
+</main>
+<script>
+  async function refresh() {
+    const status = document.getElementById("status");
+    try {
+      const res = await fetch("/stats");
+      const data = await res.json();
+      document.getElementById("entered").textContent = data.entered;
+      document.getElementById("exited").textContent = data.exited;
+      document.getElementById("inside").textContent = data.inside;
+
+      let html = "";
+      for (const [name, z] of Object.entries(data.zones)) {
+        html += `<div class="card ${name}">
+          <div class="label">${name.toUpperCase()}</div>
+          <div class="big">${z.inside}</div>
+          <div class="label">inside now · ${z.visits} visits</div>
+        </div>`;
+      }
+      document.getElementById("zones").innerHTML = html;
+      status.textContent = "● live";
+      status.style.color = "#10b981";
+    } catch (error) {
+      status.textContent = "● offline";
+      status.style.color = "#ef4444";
+    }
+  }
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

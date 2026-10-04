@@ -3,6 +3,7 @@ import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -120,3 +121,7 @@ def latest_events(limit: int = 20):
         {"id": r[0], "type": r[1], "zone": r[2], "device": r[3], "time": r[4]}
         for r in rows
     ]
+
+
+DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
+app.mount("/dashboard", StaticFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")
