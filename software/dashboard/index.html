@@ -28,6 +28,12 @@
   .EXIT { color: #ef4444; }
   .ZONE_ENTER { color: #3b82f6; }
   .ZONE_LEAVE { color: #f97316; }
+  .chart { display: flex; gap: 4px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 18px 10px; }
+  .col { flex: 1; text-align: center; }
+  .barbox { height: 120px; display: flex; align-items: flex-end; }
+  .bar { width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .bar.peak { background: #f97316; }
+  .hlabel { font-size: 10px; color: #94a3b8; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -45,10 +51,44 @@
   </div>
   <h2>Zones</h2>
   <div class="row" id="zones"></div>
+  <h2>Hourly visitor flow</h2>
+  <div class="chart" id="chart"></div>
+  <div class="label" id="peak"></div>
   <h2>Live events</h2>
   <div class="feed" id="feed"></div>
 </main>
 <script>
+  function renderHourly(data) {
+    const chart = document.getElementById("chart");
+    chart.textContent = "";
+    const max = Math.max(1, ...data.hours.map(h => h.visitors));
+    for (const h of data.hours) {
+      const col = document.createElement("div");
+      col.className = "col";
+      col.title = String(h.hour).padStart(2, "0") + ":00 - " + h.visitors + " visitors";
+      const box = document.createElement("div");
+      box.className = "barbox";
+      const bar = document.createElement("div");
+      bar.className = "bar" + (h.hour === data.peak_hour ? " peak" : "");
+      bar.style.height = (h.visitors / max * 100) + "%";
+      box.appendChild(bar);
+      const label = document.createElement("div");
+      label.className = "hlabel";
+      label.textContent = String(h.hour).padStart(2, "0");
+      col.append(box, label);
+      chart.appendChild(col);
+    }
+    const peak = document.getElementById("peak");
+    if (data.peak_hour === null) {
+      peak.textContent = "Peak hour: no visitors yet";
+    } else {
+      const p = data.hours[data.peak_hour];
+      const start = String(data.peak_hour).padStart(2, "0");
+      const end = String((data.peak_hour + 1) % 24).padStart(2, "0");
+      peak.textContent = "Peak hour: " + start + ":00 - " + end + ":00 (" + p.visitors + " visitors)";
+    }
+  }
+
   async function refresh() {
     const status = document.getElementById("status");
     try {
@@ -67,6 +107,9 @@
         </div>`;
       }
       document.getElementById("zones").innerHTML = html;
+
+      const hourlyRes = await fetch("/hourly");
+      renderHourly(await hourlyRes.json());
 
       const evRes = await fetch("/events?limit=10");
       const events = await evRes.json();

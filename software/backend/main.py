@@ -123,5 +123,24 @@ def latest_events(limit: int = 20):
     ]
 
 
+@app.get("/hourly")
+def hourly_flow():
+    db = get_db()
+    try:
+        rows = db.execute(
+            "SELECT substr(time, 12, 2) AS hour, COUNT(*) FROM events "
+            "WHERE type = 'ENTRY' GROUP BY hour"
+        ).fetchall()
+    finally:
+        db.close()
+    counts = {int(r[0]): r[1] for r in rows if r[0] and r[0].isdigit()}
+    hours = [{"hour": h, "visitors": counts.get(h, 0)} for h in range(24)]
+    peak = max(hours, key=lambda item: item["visitors"])
+    return {
+        "hours": hours,
+        "peak_hour": peak["hour"] if peak["visitors"] > 0 else None,
+    }
+
+
 DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
 app.mount("/dashboard", StaticFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")
