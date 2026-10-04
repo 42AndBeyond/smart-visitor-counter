@@ -19,6 +19,10 @@
   .snacks { border-left: 5px solid #f97316; }
   .freezer { border-left: 5px solid #06b6d4; }
   #status { float: right; font-size: 13px; color: #10b981; }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+  .controls input, .controls button { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+  .controls button { cursor: pointer; background: #2563eb; border-color: #2563eb; }
+  #mode { color: #94a3b8; font-size: 14px; }
   .feed { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 6px 18px; }
   .event { display: flex; gap: 14px; padding: 9px 0; border-bottom: 1px solid #334155; font-size: 14px; }
   .event:last-child { border-bottom: none; }
@@ -43,6 +47,11 @@
   <h1>Smart Visitor Counter</h1>
 </header>
 <main>
+  <div class="controls">
+    <label>Date: <input type="date" id="day"></label>
+    <button id="todayBtn">Today (live)</button>
+    <span id="mode"></span>
+  </div>
   <h2>Overall</h2>
   <div class="row">
     <div class="card"><div class="big" id="entered">0</div><div class="label">Entered</div></div>
@@ -58,6 +67,23 @@
   <div class="feed" id="feed"></div>
 </main>
 <script>
+  let selectedDay = null;
+  const dayInput = document.getElementById("day");
+
+  function todayString() {
+    return new Date().toLocaleDateString("en-CA");
+  }
+
+  dayInput.addEventListener("change", () => {
+    selectedDay = dayInput.value && dayInput.value !== todayString() ? dayInput.value : null;
+    refresh();
+  });
+
+  document.getElementById("todayBtn").addEventListener("click", () => {
+    selectedDay = null;
+    refresh();
+  });
+
   function renderHourly(data) {
     const chart = document.getElementById("chart");
     chart.textContent = "";
@@ -91,8 +117,17 @@
 
   async function refresh() {
     const status = document.getElementById("status");
+    const dayQuery = selectedDay ? "day=" + selectedDay : "";
     try {
-      const res = await fetch("/stats");
+      if (selectedDay === null) {
+        dayInput.max = todayString();
+        dayInput.value = todayString();
+        document.getElementById("mode").textContent = "Showing today (live)";
+      } else {
+        document.getElementById("mode").textContent = "Showing history for " + selectedDay;
+      }
+
+      const res = await fetch("/stats?" + dayQuery);
       const data = await res.json();
       document.getElementById("entered").textContent = data.entered;
       document.getElementById("exited").textContent = data.exited;
@@ -108,10 +143,10 @@
       }
       document.getElementById("zones").innerHTML = html;
 
-      const hourlyRes = await fetch("/hourly");
+      const hourlyRes = await fetch("/hourly?" + dayQuery);
       renderHourly(await hourlyRes.json());
 
-      const evRes = await fetch("/events?limit=10");
+      const evRes = await fetch("/events?limit=10&" + dayQuery);
       const events = await evRes.json();
       const feed = document.getElementById("feed");
       feed.textContent = "";

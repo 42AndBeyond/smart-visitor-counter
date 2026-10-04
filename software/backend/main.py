@@ -1,5 +1,6 @@
 import sqlite3
 import threading
+from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -33,17 +34,22 @@ def init_db():
     db.close()
 
 
-def count(db, event_type, zone=None):
-    if zone is None:
-        row = db.execute(
-            "SELECT COUNT(*) FROM events WHERE type = ?", (event_type,)
-        ).fetchone()
-    else:
-        row = db.execute(
-            "SELECT COUNT(*) FROM events WHERE type = ? AND zone = ?",
-            (event_type, zone),
-        ).fetchone()
-    return row[0]
+def pick_day(day):
+    if day is None:
+        return date.today().isoformat()
+    try:
+        return date.fromisoformat(day).isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="day must look like 2026-10-04")
+
+
+def count(db, event_type, day, zone=None):
+    sql = "SELECT COUNT(*) FROM events WHERE type = ? AND substr(time, 1, 10) = ?"
+    params = [event_type, day]
+    if zone is not None:
+        sql += " AND zone = ?"
+        params.append(zone)
+    return db.execute(sql, params).fetchone()[0]
 
 
 init_db()
@@ -67,16 +73,17 @@ def receive_event(event: Event):
         raise HTTPException(status_code=400, detail="Unknown event type")
     if event.type in ("ZONE_ENTER", "ZONE_LEAVE") and event.zone not in ZONES:
         raise HTTPException(status_code=400, detail="Unknown zone")
+    day = pick_day(event.time[:10])
 
     with lock:
         db = get_db()
         try:
             if event.type == "EXIT":
-                inside = count(db, "ENTRY") - count(db, "EXIT")
+                inside = count(db, "ENTRY", day) - count(db, "EXIT", day)
                 if inside <= 0:
                     raise HTTPException(status_code=400, detail="EXIT rejected: nobody is inside")
             elif event.type == "ZONE_LEAVE":
-                in_zone = count(db, "ZONE_ENTER", event.zone) - count(db, "ZONE_LEAVE", event.zone)
+                in_zone = count(db, "ZONE_ENTER", day, event.zone) - count(db, "ZONE_LEAVE", day, event.zone)
                 if in_zone <= 0:
                     raise HTTPException(status_code=400, detail="ZONE_LEAVE rejected: nobody in this zone")
 
@@ -92,28 +99,37 @@ def receive_event(event: Event):
 
 
 @app.get("/stats")
-def get_stats():
+def get_stats(day: str | None = None):
+    day = pick_day(day)
     db = get_db()
     try:
-        entered = count(db, "ENTRY")
-        exited = count(db, "EXIT")
+        entered = count(db, "ENTRY", day)
+        exited = count(db, "EXIT", day)
         zones = {}
         for z in ZONES:
-            visits = count(db, "ZONE_ENTER", z)
-            zones[z] = {"visits": visits, "inside": visits - count(db, "ZONE_LEAVE", z)}
+            visits = count(db, "ZONE_ENTER", day, z)
+            zones[z] = {"visits": visits, "inside": visits - count(db, "ZONE_LEAVE", day, z)}
     finally:
         db.close()
-    return {"entered": entered, "exited": exited, "inside": entered - exited, "zones": zones}
+    return {
+        "day": day,
+        "entered": entered,
+        "exited": exited,
+        "inside": entered - exited,
+        "zones": zones,
+    }
 
 
 @app.get("/events")
-def latest_events(limit: int = 20):
+def latest_events(limit: int = 20, day: str | None = None):
+    day = pick_day(day)
     limit = max(1, min(limit, 200))
     db = get_db()
     try:
         rows = db.execute(
-            "SELECT id, type, zone, device, time FROM events ORDER BY id DESC LIMIT ?",
-            (limit,),
+            "SELECT id, type, zone, device, time FROM events "
+            "WHERE substr(time, 1, 10) = ? ORDER BY id DESC LIMIT ?",
+            (day, limit),
         ).fetchall()
     finally:
         db.close()
@@ -124,12 +140,14 @@ def latest_events(limit: int = 20):
 
 
 @app.get("/hourly")
-def hourly_flow():
+def hourly_flow(day: str | None = None):
+    day = pick_day(day)
     db = get_db()
     try:
         rows = db.execute(
             "SELECT substr(time, 12, 2) AS hour, COUNT(*) FROM events "
-            "WHERE type = 'ENTRY' GROUP BY hour"
+            "WHERE type = 'ENTRY' AND substr(time, 1, 10) = ? GROUP BY hour",
+            (day,),
         ).fetchall()
     finally:
         db.close()
@@ -137,6 +155,7 @@ def hourly_flow():
     hours = [{"hour": h, "visitors": counts.get(h, 0)} for h in range(24)]
     peak = max(hours, key=lambda item: item["visitors"])
     return {
+        "day": day,
         "hours": hours,
         "peak_hour": peak["hour"] if peak["visitors"] > 0 else None,
     }
