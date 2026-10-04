@@ -1,6 +1,6 @@
 import sqlite3
 import threading
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -50,6 +50,64 @@ def count(db, event_type, day, zone=None):
         sql += " AND zone = ?"
         params.append(zone)
     return db.execute(sql, params).fetchone()[0]
+
+
+def event_times(db, event_type, day, zone=None):
+    sql = "SELECT time FROM events WHERE type = ? AND substr(time, 1, 10) = ?"
+    params = [event_type, day]
+    if zone is not None:
+        sql += " AND zone = ?"
+        params.append(zone)
+    sql += " ORDER BY time, id"
+    times = []
+    for (value,) in db.execute(sql, params).fetchall():
+        try:
+            times.append(datetime.fromisoformat(value).replace(tzinfo=None))
+        except ValueError:
+            pass
+    return times
+
+
+def average_dwell(starts, ends):
+    pairs = min(len(starts), len(ends))
+    if pairs == 0:
+        return None, 0
+    total = 0.0
+    for i in range(pairs):
+        total += max(0.0, (ends[i] - starts[i]).total_seconds())
+    return round(total / pairs, 1), pairs
+
+
+def build_insights(zones, total_visits):
+    if total_visits < 5:
+        return ["Not enough data yet. Insights appear after a few zone visits."]
+    insights = []
+    busiest = max(zones, key=lambda z: zones[z]["visits"])
+    quietest = min(zones, key=lambda z: zones[z]["visits"])
+    insights.append(
+        f"Busiest zone: {busiest} ({zones[busiest]['share_percent']}% of zone visits). "
+        "A good spot for high-margin or featured products."
+    )
+    if zones[busiest]["visits"] != zones[quietest]["visits"]:
+        insights.append(
+            f"Quietest zone: {quietest} ({zones[quietest]['share_percent']}%). "
+            "Consider promotions or signage to bring more shoppers here."
+        )
+    dwell = {
+        z: s["avg_dwell_seconds"]
+        for z, s in zones.items()
+        if s["avg_dwell_seconds"] is not None
+    }
+    if len(dwell) >= 2:
+        longest = max(dwell, key=dwell.get)
+        shortest = min(dwell, key=dwell.get)
+        if dwell[longest] != dwell[shortest]:
+            insights.append(f"Longest stays: {longest}. Shoppers browse here longer.")
+            insights.append(
+                f"Shortest stays: {shortest}. Shoppers grab things quickly, "
+                "so keep popular items easy to reach."
+            )
+    return insights
 
 
 init_db()
@@ -158,6 +216,40 @@ def hourly_flow(day: str | None = None):
         "day": day,
         "hours": hours,
         "peak_hour": peak["hour"] if peak["visitors"] > 0 else None,
+    }
+
+
+@app.get("/analytics")
+def analytics(day: str | None = None):
+    day = pick_day(day)
+    db = get_db()
+    try:
+        store_avg, store_pairs = average_dwell(
+            event_times(db, "ENTRY", day), event_times(db, "EXIT", day)
+        )
+        zones = {}
+        for z in ZONES:
+            avg, pairs = average_dwell(
+                event_times(db, "ZONE_ENTER", day, z),
+                event_times(db, "ZONE_LEAVE", day, z),
+            )
+            zones[z] = {
+                "visits": count(db, "ZONE_ENTER", day, z),
+                "avg_dwell_seconds": avg,
+                "completed_stays": pairs,
+            }
+    finally:
+        db.close()
+
+    total_visits = sum(z["visits"] for z in zones.values())
+    for z in zones.values():
+        z["share_percent"] = round(z["visits"] * 100 / total_visits) if total_visits else 0
+
+    return {
+        "day": day,
+        "store": {"avg_dwell_seconds": store_avg, "completed_visits": store_pairs},
+        "zones": zones,
+        "insights": build_insights(zones, total_visits),
     }
 
 
