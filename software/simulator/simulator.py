@@ -1,3 +1,4 @@
+import argparse
 import json
 import random
 import threading
@@ -6,7 +7,13 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-BACKEND_URL = "http://127.0.0.1:8000/event"
+# Parse command-line arguments to accept the session ID
+parser = argparse.ArgumentParser(description="Smart Visitor Counter Simulator")
+parser.add_argument("--session", default="default", help="User session ID")
+args = parser.parse_args()
+
+SESSION_ID = args.session
+BACKEND_URL = f"http://127.0.0.1:8000/event?session_id={SESSION_ID}"
 ZONES = ["grocery", "snacks", "freezer"]
 
 
@@ -14,7 +21,7 @@ def make_event(event_type, zone):
     return {
         "type": event_type,
         "zone": zone,
-        "device": "simulator-1",
+        "device": f"simulator-{SESSION_ID}",
         "time": datetime.now().isoformat(timespec="seconds"),
     }
 
@@ -45,7 +52,7 @@ def one_shopper():
 
 
 def run_store():
-    print("Simulator started. Press Ctrl+C to stop.")
+    print(f"Simulator started for session [{SESSION_ID}]. Press Ctrl+C to stop.")
     while True:
         threading.Thread(target=one_shopper, daemon=True).start()
         time.sleep(random.uniform(1, 4))
