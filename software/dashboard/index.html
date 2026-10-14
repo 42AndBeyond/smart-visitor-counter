@@ -440,7 +440,7 @@
       const statusEl = document.getElementById('sim-status');
       statusEl.innerText = `Status: ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
       try {
-          const response = await fetch(`http://54.160.208.65:8000/api/simulator/${action}?session_id=${sessionId}`, { method: 'POST' });
+          const response = await fetch(`http://54.160.208.65:8000/api/simulator/${action}/?session_id=${sessionId}`, { method: 'POST' });
           const data = await response.json();
           statusEl.innerText = `Status: ${data.status}`;
       } catch (err) {
