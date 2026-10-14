@@ -10,6 +10,7 @@ import os
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
@@ -22,7 +23,6 @@ simulator_processes = {}
 
 
 def get_db(session_id: str = "default"):
-    # Sanitize session_id to prevent path traversal or invalid characters
     safe_session_id = "".join(c for c in session_id if c.isalnum() or c in ("_", "-"))
     if not safe_session_id:
         safe_session_id = "default"
@@ -30,7 +30,6 @@ def get_db(session_id: str = "default"):
     db_path = Path(__file__).parent / f"visitors_{safe_session_id}.db"
     db = sqlite3.connect(db_path)
     
-    # Ensure table exists for this session database
     db.execute(
         """CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,10 +67,6 @@ def count(db, event_type, day, zone=None):
 
 
 def average_dwell(db, enter_type, leave_type, day, zone=None):
-    """
-    Calculates average completed dwell time using aggregate
-    person-time rather than trying to identify individual visitors.
-    """
     sql = """
         SELECT type, time
         FROM events
@@ -181,37 +176,6 @@ def home():
     return {"message": "Smart Visitor Counter backend is running"}
 
 
-@app.post("/api/simulator/start")
-@app.post("/api/simulator/start/")
-def start_simulator(session_id: str = Query("default")):
-    global simulator_processes
-    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
-        return {"status": "Simulator is already running"}
-    
-    sim_path = Path(__file__).parent / "simulator.py"
-    if not sim_path.exists():
-        raise HTTPException(status_code=404, detail="simulator.py not found")
-        
-    proc = subprocess.Popen(
-        [sys.executable, str(sim_path), "--session", session_id],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    simulator_processes[session_id] = proc
-    return {"status": "started", "session_id": session_id}
-
-
-@app.post("/api/simulator/stop")
-@app.post("/api/simulator/stop/")
-def stop_simulator(session_id: str = Query("default")):
-    global simulator_processes
-    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
-        simulator_processes[session_id].terminate()
-        del simulator_processes[session_id]
-        return {"status": "stopped"}
-    return {"status": "Simulator is not running"}
-
-
 @app.post("/event")
 def receive_event(event: Event, session_id: str = Query("default")):
     if event.type not in EVENT_TYPES:
@@ -272,7 +236,7 @@ def receive_event(event: Event, session_id: str = Query("default")):
 
 
 @app.get("/stats")
-def get_stats(session_id: str = Query("default"), day: str | None = None):
+def get_stats(session_id: str = Query("default"), day: Optional[str] = None):
     day = pick_day(day)
     db = get_db(session_id)
 
@@ -308,7 +272,7 @@ def get_stats(session_id: str = Query("default"), day: str | None = None):
 
 
 @app.get("/events")
-def latest_events(session_id: str = Query("default"), limit: int = 20, day: str | None = None):
+def latest_events(session_id: str = Query("default"), limit: int = 20, day: Optional[str] = None):
     day = pick_day(day)
     limit = max(1, min(limit, 200))
     db = get_db(session_id)
@@ -337,7 +301,7 @@ def latest_events(session_id: str = Query("default"), limit: int = 20, day: str 
 
 
 @app.get("/hourly")
-def hourly_flow(session_id: str = Query("default"), day: str | None = None):
+def hourly_flow(session_id: str = Query("default"), day: Optional[str] = None):
     day = pick_day(day)
     db = get_db(session_id)
 
@@ -385,7 +349,7 @@ def hourly_flow(session_id: str = Query("default"), day: str | None = None):
 
 
 @app.get("/analytics")
-def analytics(session_id: str = Query("default"), day: str | None = None):
+def analytics(session_id: str = Query("default"), day: Optional[str] = None):
     day = pick_day(day)
     db = get_db(session_id)
 
@@ -448,6 +412,37 @@ def analytics(session_id: str = Query("default"), day: str | None = None):
             total_visits
         ),
     }
+
+
+@app.post("/api/simulator/start")
+@app.post("/api/simulator/start/")
+def start_simulator(session_id: str = Query("default")):
+    global simulator_processes
+    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
+        return {"status": "Simulator is already running"}
+    
+    sim_path = Path(__file__).parent / "simulator.py"
+    if not sim_path.exists():
+        raise HTTPException(status_code=404, detail="simulator.py not found")
+        
+    proc = subprocess.Popen(
+        [sys.executable, str(sim_path), "--session", session_id],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    simulator_processes[session_id] = proc
+    return {"status": "started", "session_id": session_id}
+
+
+@app.post("/api/simulator/stop")
+@app.post("/api/simulator/stop/")
+def stop_simulator(session_id: str = Query("default")):
+    global simulator_processes
+    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
+        simulator_processes[session_id].terminate()
+        del simulator_processes[session_id]
+        return {"status": "stopped"}
+    return {"status": "Simulator is not running"}
 
 
 DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
