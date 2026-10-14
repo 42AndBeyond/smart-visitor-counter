@@ -182,6 +182,7 @@ def home():
 
 
 @app.post("/api/simulator/start")
+@app.post("/api/simulator/start/")
 def start_simulator(session_id: str = Query("default")):
     global simulator_processes
     if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
@@ -201,6 +202,7 @@ def start_simulator(session_id: str = Query("default")):
 
 
 @app.post("/api/simulator/stop")
+@app.post("/api/simulator/stop/")
 def stop_simulator(session_id: str = Query("default")):
     global simulator_processes
     if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
