@@ -384,40 +384,36 @@
 </main>
 
 <script>
+  // Automatically generate or retrieve a unique session ID for this user/device
+  let sessionId = localStorage.getItem('visitor_session_id');
+  if (!sessionId) {
+      sessionId = 'user_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('visitor_session_id', sessionId);
+  }
 
   let selectedDay = null;
-
   const dayInput = document.getElementById("day");
-
   const MAP_ORDER = ["grocery", "snacks", "freezer"];
-
 
   function todayString() {
     return new Date().toLocaleDateString("en-CA");
   }
 
-
   function formatDuration(seconds) {
-
     if (seconds === null || seconds === undefined) {
       return "-";
     }
-
     if (seconds < 60) {
       return Math.round(seconds) + "s";
     }
-
     return Math.floor(seconds / 60) +
       "m " +
       Math.round(seconds % 60) +
       "s";
   }
 
-
   function heatColor(t) {
-
     const hue = 210 - 205 * t;
-
     return "hsl(" +
       hue +
       ", " +
@@ -427,34 +423,25 @@
       "%)";
   }
 
-
   dayInput.addEventListener("change", () => {
-
     selectedDay =
       dayInput.value &&
       dayInput.value !== todayString()
         ? dayInput.value
         : null;
-
     refresh();
-
   });
-
 
   document.getElementById("todayBtn").addEventListener("click", () => {
-
     selectedDay = null;
-
     refresh();
-
   });
-
 
   async function controlSimulator(action) {
       const statusEl = document.getElementById('sim-status');
       statusEl.innerText = `Status: ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
       try {
-          const response = await fetch(`/api/simulator/${action}`, { method: 'POST' });
+          const response = await fetch(`/api/simulator/${action}?session_id=${sessionId}`, { method: 'POST' });
           const data = await response.json();
           statusEl.innerText = `Status: ${data.status}`;
       } catch (err) {
@@ -463,11 +450,8 @@
       }
   }
 
-
   function renderHeatmap(stats, analytics) {
-
     const map = document.getElementById("zonemap");
-
     map.textContent = "";
 
     const maxVisits = Math.max(
@@ -478,13 +462,10 @@
     );
 
     for (const name of MAP_ORDER) {
-
       const z = stats.zones[name];
-
       const a = analytics.zones[name];
 
       const block = document.createElement("div");
-
       block.className = "zone";
 
       block.style.background =
@@ -492,50 +473,31 @@
           ? "#1e293b"
           : heatColor(z.visits / maxVisits);
 
-
       const title = document.createElement("div");
-
       title.className = "zname";
-
       title.textContent = name.toUpperCase();
 
-
       const num = document.createElement("div");
-
       num.className = "znum";
-
       num.textContent = z.visits + " visits (" + (a ? a.share_percent : 0) + "%)";
 
-
       const sub = document.createElement("div");
-
       sub.className = "zsub";
-
       sub.textContent =
         z.inside +
         " inside now · avg stay " +
         formatDuration(a ? a.avg_dwell_seconds : null);
 
-
       block.append(title, num, sub);
-
       map.appendChild(block);
-
     }
 
-    document.getElementById("doorIn").textContent =
-      stats.entered;
-
-    document.getElementById("doorOut").textContent =
-      stats.exited;
-
+    document.getElementById("doorIn").textContent = stats.entered;
+    document.getElementById("doorOut").textContent = stats.exited;
   }
 
-
   function renderHourly(data) {
-
     const chart = document.getElementById("chart");
-
     chart.textContent = "";
 
     const max = Math.max(
@@ -546,25 +508,18 @@
     );
 
     for (const h of data.hours) {
-
       const col = document.createElement("div");
-
       col.className = "col";
-
       col.title =
         String(h.hour).padStart(2, "0") +
         ":00 - " +
         h.visitors +
         " visitors";
 
-
       const box = document.createElement("div");
-
       box.className = "barbox";
 
-
       const bar = document.createElement("div");
-
       bar.className =
         "bar" +
         (h.hour === data.peak_hour
@@ -575,44 +530,24 @@
         (h.visitors / max * 100) +
         "%";
 
-
       box.appendChild(bar);
 
-
       const label = document.createElement("div");
-
       label.className = "hlabel";
-
       label.textContent =
         String(h.hour).padStart(2, "0");
 
-
       col.append(box, label);
-
       chart.appendChild(col);
-
     }
 
-
     const peak = document.getElementById("peak");
-
     if (data.peak_hour === null) {
-
-      peak.textContent =
-        "Peak hour: no visitors yet";
-
+      peak.textContent = "Peak hour: no visitors yet";
     } else {
-
-      const p =
-        data.hours[data.peak_hour];
-
-      const start =
-        String(data.peak_hour).padStart(2, "0");
-
-      const end =
-        String(
-          (data.peak_hour + 1) % 24
-        ).padStart(2, "0");
+      const p = data.hours[data.peak_hour];
+      const start = String(data.peak_hour).padStart(2, "0");
+      const end = String((data.peak_hour + 1) % 24).padStart(2, "0");
 
       peak.textContent =
         "Peak hour: " +
@@ -622,227 +557,87 @@
         ":00 (" +
         p.visitors +
         " visitors)";
-
     }
-
   }
 
-
   function renderInsights(list) {
-
-    const ul =
-      document.getElementById("insights");
-
+    const ul = document.getElementById("insights");
     ul.textContent = "";
 
     for (const text of list) {
-
-      const li =
-        document.createElement("li");
-
+      const li = document.createElement("li");
       li.textContent = text;
-
       ul.appendChild(li);
-
     }
-
   }
-
 
   async function refresh() {
-
-    const status =
-      document.getElementById("status");
-
-    const dayQuery =
-      selectedDay
-        ? "day=" + selectedDay
-        : "";
-
-    try {
-
-      if (selectedDay === null) {
-
-        dayInput.max =
-          todayString();
-
-        dayInput.value =
-          todayString();
-
-        document.getElementById(
-          "mode"
-        ).textContent =
-          "Showing today (live)";
-
-      } else {
-
-        document.getElementById(
-          "mode"
-        ).textContent =
-          "Showing history for " +
-          selectedDay;
-
-      }
-
-
-      const stats =
-        await (
-          await fetch(
-            "/stats?" + dayQuery
-          )
-        ).json();
-
-
-      document.getElementById(
-        "entered"
-      ).textContent =
-        stats.entered;
-
-
-      document.getElementById(
-        "exited"
-      ).textContent =
-        stats.exited;
-
-
-      document.getElementById(
-        "inside"
-      ).textContent =
-        stats.inside;
-
-
-      const analytics =
-        await (
-          await fetch(
-            "/analytics?" + dayQuery
-          )
-        ).json();
-
-
-      document.getElementById(
-        "storedwell"
-      ).textContent =
-        formatDuration(
-          analytics.store.avg_dwell_seconds
-        );
-
-
-      renderHeatmap(
-        stats,
-        analytics
-      );
-
-
-      renderInsights(
-        analytics.insights
-      );
-
-
-      renderHourly(
-        await (
-          await fetch(
-            "/hourly?" + dayQuery
-          )
-        ).json()
-      );
-
-
-      const events =
-        await (
-          await fetch(
-            "/events?limit=10&" +
-            dayQuery
-          )
-        ).json();
-
-
-      const feed =
-        document.getElementById(
-          "feed"
-        );
-
-      feed.textContent = "";
-
-
-      for (const e of events) {
-
-        const row =
-          document.createElement(
-            "div"
-          );
-
-        row.className = "event";
-
-
-        const t =
-          document.createElement(
-            "span"
-          );
-
-        t.className = "time";
-
-        t.textContent =
-          e.time.slice(11, 19);
-
-
-        const tag =
-          document.createElement(
-            "span"
-          );
-
-        tag.className =
-          "tag " + e.type;
-
-        tag.textContent =
-          e.type;
-
-
-        const where =
-          document.createElement(
-            "span"
-          );
-
-        where.textContent =
-          e.zone;
-
-
-        row.append(
-          t,
-          tag,
-          where
-        );
-
-        feed.appendChild(row);
-
-      }
-
-
-      status.textContent =
-        "● live";
-
-      status.style.color =
-        "#10b981";
-
-    } catch (error) {
-
-      status.textContent =
-        "● offline";
-
-      status.style.color =
-        "#ef4444";
-
+    const status = document.getElementById("status");
+    let dayQuery = `session_id=${sessionId}`;
+    if (selectedDay) {
+      dayQuery += `&day=${selectedDay}`;
     }
 
+    try {
+      if (selectedDay === null) {
+        dayInput.max = todayString();
+        dayInput.value = todayString();
+        document.getElementById("mode").textContent = "Showing today (live)";
+      } else {
+        document.getElementById("mode").textContent = "Showing history for " + selectedDay;
+      }
+
+      const stats = await (await fetch("/stats?" + dayQuery)).json();
+      document.getElementById("entered").textContent = stats.entered;
+      document.getElementById("exited").textContent = stats.exited;
+      document.getElementById("inside").textContent = stats.inside;
+
+      const analytics = await (await fetch("/analytics?" + dayQuery)).json();
+      document.getElementById("storedwell").textContent = formatDuration(
+        analytics.store.avg_dwell_seconds
+      );
+
+      renderHeatmap(stats, analytics);
+      renderInsights(analytics.insights);
+
+      renderHourly(
+        await (await fetch("/hourly?" + dayQuery)).json()
+      );
+
+      const events = await (await fetch("/events?limit=10&" + dayQuery)).json();
+      const feed = document.getElementById("feed");
+      feed.textContent = "";
+
+      for (const e of events) {
+        const row = document.createElement("div");
+        row.className = "event";
+
+        const t = document.createElement("span");
+        t.className = "time";
+        t.textContent = e.time.slice(11, 19);
+
+        const tag = document.createElement("span");
+        tag.className = "tag " + e.type;
+        tag.textContent = e.type;
+
+        const where = document.createElement("span");
+        where.textContent = e.zone;
+
+        row.append(t, tag, where);
+        feed.appendChild(row);
+      }
+
+      status.textContent = "● live";
+      status.style.color = "#10b981";
+
+    } catch (error) {
+      status.textContent = "● offline";
+      status.style.color = "#ef4444";
+    }
   }
 
-
   refresh();
-
-  setInterval(
-    refresh,
-    2000
-  );
-
+  setInterval(refresh, 2000);
 </script>
 
 </body>

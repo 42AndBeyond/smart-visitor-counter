@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sqlite3
 import threading
 from datetime import date, datetime
@@ -6,27 +7,30 @@ import subprocess
 import sys
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 app = FastAPI()
 
-DB_PATH = Path(__file__).parent / "visitors.db"
 ZONES = ["grocery", "snacks", "freezer"]
 EVENT_TYPES = ["ENTRY", "EXIT", "ZONE_ENTER", "ZONE_LEAVE"]
 lock = threading.Lock()
 
-# Global variable to keep track of the simulator process
-simulator_process = None
+# Dictionary to keep track of simulator processes per session: {session_id: subprocess.Popen}
+simulator_processes = {}
 
 
-def get_db():
-    return sqlite3.connect(DB_PATH)
-
-
-def init_db():
-    db = get_db()
+def get_db(session_id: str = "default"):
+    # Sanitize session_id to prevent path traversal or invalid characters
+    safe_session_id = "".join(c for c in session_id if c.isalnum() or c in ("_", "-"))
+    if not safe_session_id:
+        safe_session_id = "default"
+    
+    db_path = Path(__file__).parent / f"visitors_{safe_session_id}.db"
+    db = sqlite3.connect(db_path)
+    
+    # Ensure table exists for this session database
     db.execute(
         """CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +41,7 @@ def init_db():
         )"""
     )
     db.commit()
-    db.close()
+    return db
 
 
 def pick_day(day):
@@ -165,9 +169,6 @@ def build_insights(zones, total_visits):
     return insights
 
 
-init_db()
-
-
 class Event(BaseModel):
     type: str
     zone: str
@@ -181,35 +182,36 @@ def home():
 
 
 @app.post("/api/simulator/start")
-def start_simulator():
-    global simulator_process
-    if simulator_process is not None and simulator_process.poll() is None:
+def start_simulator(session_id: str = Query("default")):
+    global simulator_processes
+    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
         return {"status": "Simulator is already running"}
     
     sim_path = Path(__file__).parent / "simulator.py"
     if not sim_path.exists():
         raise HTTPException(status_code=404, detail="simulator.py not found")
         
-    simulator_process = subprocess.Popen(
-        [sys.executable, str(sim_path)],
+    proc = subprocess.Popen(
+        [sys.executable, str(sim_path), "--session", session_id],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    return {"status": "Simulator started successfully"}
+    simulator_processes[session_id] = proc
+    return {"status": "Simulator started successfully", "session_id": session_id}
 
 
 @app.post("/api/simulator/stop")
-def stop_simulator():
-    global simulator_process
-    if simulator_process is not None and simulator_process.poll() is None:
-        simulator_process.terminate()
-        simulator_process = None
+def stop_simulator(session_id: str = Query("default")):
+    global simulator_processes
+    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
+        simulator_processes[session_id].terminate()
+        del simulator_processes[session_id]
         return {"status": "Simulator stopped successfully"}
     return {"status": "Simulator is not running"}
 
 
 @app.post("/event")
-def receive_event(event: Event):
+def receive_event(event: Event, session_id: str = Query("default")):
     if event.type not in EVENT_TYPES:
         raise HTTPException(
             status_code=400,
@@ -225,7 +227,7 @@ def receive_event(event: Event):
     day = pick_day(event.time[:10])
 
     with lock:
-        db = get_db()
+        db = get_db(session_id)
 
         try:
             if event.type == "EXIT":
@@ -268,10 +270,9 @@ def receive_event(event: Event):
 
 
 @app.get("/stats")
-def get_stats(day: str | None = None):
+def get_stats(session_id: str = Query("default"), day: str | None = None):
     day = pick_day(day)
-
-    db = get_db()
+    db = get_db(session_id)
 
     try:
         entered = count(db, "ENTRY", day)
@@ -305,12 +306,10 @@ def get_stats(day: str | None = None):
 
 
 @app.get("/events")
-def latest_events(limit: int = 20, day: str | None = None):
+def latest_events(session_id: str = Query("default"), limit: int = 20, day: str | None = None):
     day = pick_day(day)
-
     limit = max(1, min(limit, 200))
-
-    db = get_db()
+    db = get_db(session_id)
 
     try:
         rows = db.execute(
@@ -336,10 +335,9 @@ def latest_events(limit: int = 20, day: str | None = None):
 
 
 @app.get("/hourly")
-def hourly_flow(day: str | None = None):
+def hourly_flow(session_id: str = Query("default"), day: str | None = None):
     day = pick_day(day)
-
-    db = get_db()
+    db = get_db(session_id)
 
     try:
         rows = db.execute(
@@ -385,10 +383,9 @@ def hourly_flow(day: str | None = None):
 
 
 @app.get("/analytics")
-def analytics(day: str | None = None):
+def analytics(session_id: str = Query("default"), day: str | None = None):
     day = pick_day(day)
-
-    db = get_db()
+    db = get_db(session_id)
 
     try:
         store_avg, store_pairs = average_dwell(
