@@ -197,7 +197,7 @@ def start_simulator(session_id: str = Query("default")):
         stderr=subprocess.PIPE
     )
     simulator_processes[session_id] = proc
-    return {"status": "Simulator started successfully", "session_id": session_id}
+    return {"status": "started", "session_id": session_id}
 
 
 @app.post("/api/simulator/stop")
@@ -206,7 +206,7 @@ def stop_simulator(session_id: str = Query("default")):
     if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
         simulator_processes[session_id].terminate()
         del simulator_processes[session_id]
-        return {"status": "Simulator stopped successfully"}
+        return {"status": "stopped"}
     return {"status": "Simulator is not running"}
 
 
