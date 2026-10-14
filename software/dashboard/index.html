@@ -1,283 +1,849 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Smart Visitor Counter</title>
-<style>
-  body { margin: 0; font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
-  header { padding: 20px 32px; border-bottom: 1px solid #1e293b; }
-  header small { color: #3b82f6; font-weight: bold; letter-spacing: 1px; }
-  header h1 { margin: 4px 0 0; font-size: 26px; }
-  main { padding: 24px 32px; max-width: 1000px; }
-  h2 { font-size: 13px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin: 28px 0 12px; }
-  .row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .card { flex: 1; min-width: 180px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
-  .big { font-size: 42px; font-weight: bold; }
-  .label { color: #94a3b8; margin-top: 4px; }
-  .grocery { border-left: 5px solid #10b981; }
-  .snacks { border-left: 5px solid #f97316; }
-  .freezer { border-left: 5px solid #06b6d4; }
-  #status { float: right; font-size: 13px; color: #10b981; }
-  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-  .controls input, .controls button { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; font-size: 14px; }
-  .controls button { cursor: pointer; background: #2563eb; border-color: #2563eb; }
-  #mode { color: #94a3b8; font-size: 14px; }
-  .feed { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 6px 18px; }
-  .event { display: flex; gap: 14px; padding: 9px 0; border-bottom: 1px solid #334155; font-size: 14px; }
-  .event:last-child { border-bottom: none; }
-  .event .time { color: #94a3b8; width: 70px; }
-  .event .tag { font-weight: bold; width: 110px; }
-  .ENTRY { color: #10b981; }
-  .EXIT { color: #ef4444; }
-  .ZONE_ENTER { color: #3b82f6; }
-  .ZONE_LEAVE { color: #f97316; }
-  .chart { display: flex; gap: 4px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 18px 10px; }
-  .col { flex: 1; text-align: center; }
-  .barbox { height: 120px; display: flex; align-items: flex-end; }
-  .bar { width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; min-height: 2px; }
-  .bar.peak { background: #f97316; }
-  .hlabel { font-size: 10px; color: #94a3b8; margin-top: 4px; }
-  .zonename { font-weight: bold; letter-spacing: 1px; }
-  .insights { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 18px 14px 36px; }
-  .insights li { padding: 6px 0; line-height: 1.4; }
-  .floor { position: relative; background: #111c33; border: 2px solid #475569; border-radius: 12px; padding: 16px 16px 64px; }
-  .zonemap { display: flex; gap: 12px; }
-  .zone { flex: 1; min-height: 150px; border-radius: 10px; padding: 14px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.2); transition: background 0.6s; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
-  .zone .zname { font-weight: bold; letter-spacing: 1px; }
-  .zone .znum { font-size: 34px; font-weight: bold; }
-  .zone .zsub { font-size: 13px; }
-  .doors { position: absolute; bottom: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; }
-  .door { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 6px; }
-  .door.in { background: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
-  .door.out { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
-  .legend { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
-  .legendbar { height: 10px; width: 180px; border-radius: 5px; background: linear-gradient(90deg, hsl(210,70%,35%), hsl(142,75%,40%), hsl(75,80%,45%), hsl(5,85%,50%)); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Visitor Counter</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    header small {
+      color: #3b82f6;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    header h1 {
+      margin: 4px 0 0;
+      font-size: 26px;
+    }
+
+    main {
+      padding: 24px 32px;
+      max-width: 1000px;
+    }
+
+    h2 {
+      font-size: 13px;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 28px 0 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      flex: 1;
+      min-width: 180px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .big {
+      font-size: 42px;
+      font-weight: bold;
+    }
+
+    .label {
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    #status {
+      float: right;
+      font-size: 13px;
+      color: #10b981;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .controls input,
+    .controls button {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    .controls button {
+      cursor: pointer;
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    #mode {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .feed {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 6px 18px;
+    }
+
+    .event {
+      display: flex;
+      gap: 14px;
+      padding: 9px 0;
+      border-bottom: 1px solid #334155;
+      font-size: 14px;
+    }
+
+    .event:last-child {
+      border-bottom: none;
+    }
+
+    .event .time {
+      color: #94a3b8;
+      width: 70px;
+    }
+
+    .event .tag {
+      font-weight: bold;
+      width: 110px;
+    }
+
+    .ENTRY {
+      color: #10b981;
+    }
+
+    .EXIT {
+      color: #ef4444;
+    }
+
+    .ZONE_ENTER {
+      color: #3b82f6;
+    }
+
+    .ZONE_LEAVE {
+      color: #f97316;
+    }
+
+    .chart {
+      display: flex;
+      gap: 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px 18px 10px;
+    }
+
+    .col {
+      flex: 1;
+      text-align: center;
+    }
+
+    .barbox {
+      height: 120px;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .bar {
+      width: 100%;
+      background: #3b82f6;
+      border-radius: 4px 4px 0 0;
+      min-height: 2px;
+    }
+
+    .bar.peak {
+      background: #f97316;
+    }
+
+    .hlabel {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .insights {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px 18px 14px 36px;
+    }
+
+    .insights li {
+      padding: 6px 0;
+      line-height: 1.4;
+    }
+
+    .floor {
+      position: relative;
+      background: #111c33;
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 16px 16px 64px;
+    }
+
+    .zonemap {
+      display: flex;
+      gap: 12px;
+    }
+
+    .zone {
+      flex: 1;
+      min-height: 150px;
+      border-radius: 10px;
+      padding: 14px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: background 0.6s;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    .zone .zname {
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .zone .znum {
+      font-size: 34px;
+      font-weight: bold;
+    }
+
+    .zone .zsub {
+      font-size: 13px;
+    }
+
+    .doors {
+      position: absolute;
+      bottom: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .door {
+      font-size: 13px;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    .door.in {
+      background: #064e3b;
+      color: #6ee7b7;
+      border: 1px solid #10b981;
+    }
+
+    .door.out {
+      background: #7f1d1d;
+      color: #fca5a5;
+      border: 1px solid #ef4444;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #94a3b8;
+      flex-wrap: wrap;
+    }
+
+    .legendbar {
+      height: 10px;
+      width: 180px;
+      border-radius: 5px;
+      background: linear-gradient(
+        90deg,
+        hsl(210,70%,35%),
+        hsl(142,75%,40%),
+        hsl(75,80%,45%),
+        hsl(5,85%,50%)
+      );
+    }
+  </style>
 </head>
+
 <body>
+
 <header>
   <small>SMART STORE TELEMETRY</small>
   <span id="status">connecting...</span>
   <h1>Smart Visitor Counter</h1>
 </header>
+
 <main>
+
   <div class="controls">
     <label>Date: <input type="date" id="day"></label>
     <button id="todayBtn">Today (live)</button>
     <span id="mode"></span>
   </div>
+
+  <!-- Simulation Control Panel -->
+  <div style="margin: 16px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button onclick="controlSimulator('start')" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">▶ Start Simulation</button>
+      <button onclick="controlSimulator('stop')" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">⏹ Stop Simulation</button>
+      <span id="sim-status" style="color: #a0aec0; font-size: 14px;">Status: Idle</span>
+  </div>
+
   <h2>Overall</h2>
+
   <div class="row">
-    <div class="card"><div class="big" id="entered">0</div><div class="label">Entered</div></div>
-    <div class="card"><div class="big" id="exited">0</div><div class="label">Exited</div></div>
-    <div class="card"><div class="big" id="inside">0</div><div class="label">Currently inside</div></div>
-    <div class="card"><div class="big" id="storedwell">-</div><div class="label">Avg time in store</div></div>
-  </div>
-  <h2>Store layout heatmap</h2>
-  <div class="floor">
-    <div class="zonemap" id="zonemap"></div>
-    <div class="doors">
-      <div class="door in">ENTRANCE · <span id="doorIn">0</span> in</div>
-      <div class="door out">EXIT · <span id="doorOut">0</span> out</div>
+
+    <div class="card">
+      <div class="big" id="entered">0</div>
+      <div class="label">Entered</div>
     </div>
+
+    <div class="card">
+      <div class="big" id="exited">0</div>
+      <div class="label">Exited</div>
+    </div>
+
+    <div class="card">
+      <div class="big" id="inside">0</div>
+      <div class="label">Currently inside</div>
+    </div>
+
+    <div class="card">
+      <div class="big" id="storedwell">-</div>
+      <div class="label">Avg completed visit</div>
+    </div>
+
   </div>
+
+  <h2>Store layout heatmap</h2>
+
+  <div class="floor">
+
+    <div class="zonemap" id="zonemap"></div>
+
+    <div class="doors">
+
+      <div class="door in">
+        ENTRANCE · <span id="doorIn">0</span> in
+      </div>
+
+      <div class="door out">
+        EXIT · <span id="doorOut">0</span> out
+      </div>
+
+    </div>
+
+  </div>
+
   <div class="legend">
-    <span>Quiet</span><div class="legendbar"></div><span>Busiest</span>
+    <span>Quiet</span>
+    <div class="legendbar"></div>
+    <span>Busiest</span>
     <span>(zones are compared with each other, by number of visits)</span>
   </div>
-  <h2>Zones</h2>
-  <div class="row" id="zones"></div>
+
   <h2>Zone insights</h2>
+
   <ul class="insights" id="insights"></ul>
+
   <h2>Hourly visitor flow</h2>
+
   <div class="chart" id="chart"></div>
+
   <div class="label" id="peak"></div>
+
   <h2>Live events</h2>
+
   <div class="feed" id="feed"></div>
+
 </main>
+
 <script>
+
   let selectedDay = null;
+
   const dayInput = document.getElementById("day");
+
   const MAP_ORDER = ["grocery", "snacks", "freezer"];
+
 
   function todayString() {
     return new Date().toLocaleDateString("en-CA");
   }
 
+
   function formatDuration(seconds) {
-    if (seconds === null || seconds === undefined) return "-";
-    if (seconds < 60) return Math.round(seconds) + "s";
-    return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
+
+    if (seconds === null || seconds === undefined) {
+      return "-";
+    }
+
+    if (seconds < 60) {
+      return Math.round(seconds) + "s";
+    }
+
+    return Math.floor(seconds / 60) +
+      "m " +
+      Math.round(seconds % 60) +
+      "s";
   }
+
 
   function heatColor(t) {
+
     const hue = 210 - 205 * t;
-    return "hsl(" + hue + ", " + (70 + 15 * t) + "%, " + (35 + 15 * t) + "%)";
+
+    return "hsl(" +
+      hue +
+      ", " +
+      (70 + 15 * t) +
+      "%, " +
+      (35 + 15 * t) +
+      "%)";
   }
+
 
   dayInput.addEventListener("change", () => {
-    selectedDay = dayInput.value && dayInput.value !== todayString() ? dayInput.value : null;
+
+    selectedDay =
+      dayInput.value &&
+      dayInput.value !== todayString()
+        ? dayInput.value
+        : null;
+
     refresh();
+
   });
+
 
   document.getElementById("todayBtn").addEventListener("click", () => {
+
     selectedDay = null;
+
     refresh();
+
   });
 
+
+  async function controlSimulator(action) {
+      const statusEl = document.getElementById('sim-status');
+      statusEl.innerText = `Status: ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
+      try {
+          const response = await fetch(`/api/simulator/${action}`, { method: 'POST' });
+          const data = await response.json();
+          statusEl.innerText = `Status: ${data.status}`;
+      } catch (err) {
+          statusEl.innerText = `Status: Error connecting to server`;
+          console.error(err);
+      }
+  }
+
+
   function renderHeatmap(stats, analytics) {
+
     const map = document.getElementById("zonemap");
+
     map.textContent = "";
-    const maxVisits = Math.max(1, ...MAP_ORDER.map(n => stats.zones[n].visits));
+
+    const maxVisits = Math.max(
+      1,
+      ...MAP_ORDER.map(
+        n => stats.zones[n].visits
+      )
+    );
+
     for (const name of MAP_ORDER) {
+
       const z = stats.zones[name];
+
       const a = analytics.zones[name];
+
       const block = document.createElement("div");
+
       block.className = "zone";
-      block.style.background = z.visits === 0 ? "#1e293b" : heatColor(z.visits / maxVisits);
+
+      block.style.background =
+        z.visits === 0
+          ? "#1e293b"
+          : heatColor(z.visits / maxVisits);
+
 
       const title = document.createElement("div");
+
       title.className = "zname";
+
       title.textContent = name.toUpperCase();
+
 
       const num = document.createElement("div");
+
       num.className = "znum";
-      num.textContent = z.visits + " visits";
+
+      num.textContent = z.visits + " visits (" + (a ? a.share_percent : 0) + "%)";
+
 
       const sub = document.createElement("div");
+
       sub.className = "zsub";
-      sub.textContent = z.inside + " inside now · avg stay " + formatDuration(a.avg_dwell_seconds);
+
+      sub.textContent =
+        z.inside +
+        " inside now · avg stay " +
+        formatDuration(a ? a.avg_dwell_seconds : null);
+
 
       block.append(title, num, sub);
+
       map.appendChild(block);
+
     }
-    document.getElementById("doorIn").textContent = stats.entered;
-    document.getElementById("doorOut").textContent = stats.exited;
+
+    document.getElementById("doorIn").textContent =
+      stats.entered;
+
+    document.getElementById("doorOut").textContent =
+      stats.exited;
+
   }
+
 
   function renderHourly(data) {
+
     const chart = document.getElementById("chart");
+
     chart.textContent = "";
-    const max = Math.max(1, ...data.hours.map(h => h.visitors));
+
+    const max = Math.max(
+      1,
+      ...data.hours.map(
+        h => h.visitors
+      )
+    );
+
     for (const h of data.hours) {
+
       const col = document.createElement("div");
+
       col.className = "col";
-      col.title = String(h.hour).padStart(2, "0") + ":00 - " + h.visitors + " visitors";
+
+      col.title =
+        String(h.hour).padStart(2, "0") +
+        ":00 - " +
+        h.visitors +
+        " visitors";
+
+
       const box = document.createElement("div");
+
       box.className = "barbox";
+
+
       const bar = document.createElement("div");
-      bar.className = "bar" + (h.hour === data.peak_hour ? " peak" : "");
-      bar.style.height = (h.visitors / max * 100) + "%";
+
+      bar.className =
+        "bar" +
+        (h.hour === data.peak_hour
+          ? " peak"
+          : "");
+
+      bar.style.height =
+        (h.visitors / max * 100) +
+        "%";
+
+
       box.appendChild(bar);
+
+
       const label = document.createElement("div");
+
       label.className = "hlabel";
-      label.textContent = String(h.hour).padStart(2, "0");
+
+      label.textContent =
+        String(h.hour).padStart(2, "0");
+
+
       col.append(box, label);
+
       chart.appendChild(col);
+
     }
+
+
     const peak = document.getElementById("peak");
+
     if (data.peak_hour === null) {
-      peak.textContent = "Peak hour: no visitors yet";
+
+      peak.textContent =
+        "Peak hour: no visitors yet";
+
     } else {
-      const p = data.hours[data.peak_hour];
-      const start = String(data.peak_hour).padStart(2, "0");
-      const end = String((data.peak_hour + 1) % 24).padStart(2, "0");
-      peak.textContent = "Peak hour: " + start + ":00 - " + end + ":00 (" + p.visitors + " visitors)";
+
+      const p =
+        data.hours[data.peak_hour];
+
+      const start =
+        String(data.peak_hour).padStart(2, "0");
+
+      const end =
+        String(
+          (data.peak_hour + 1) % 24
+        ).padStart(2, "0");
+
+      peak.textContent =
+        "Peak hour: " +
+        start +
+        ":00 - " +
+        end +
+        ":00 (" +
+        p.visitors +
+        " visitors)";
+
     }
+
   }
 
-  function renderZones(stats, analytics) {
-    const zones = document.getElementById("zones");
-    zones.textContent = "";
-    for (const [name, z] of Object.entries(stats.zones)) {
-      const a = analytics.zones[name];
-      const card = document.createElement("div");
-      card.className = "card " + name;
-
-      const title = document.createElement("div");
-      title.className = "label zonename";
-      title.textContent = name.toUpperCase();
-
-      const big = document.createElement("div");
-      big.className = "big";
-      big.textContent = z.inside;
-
-      const line1 = document.createElement("div");
-      line1.className = "label";
-      line1.textContent = "inside now · " + z.visits + " visits (" + a.share_percent + "%)";
-
-      const line2 = document.createElement("div");
-      line2.className = "label";
-      line2.textContent = "avg stay: " + formatDuration(a.avg_dwell_seconds);
-
-      card.append(title, big, line1, line2);
-      zones.appendChild(card);
-    }
-  }
 
   function renderInsights(list) {
-    const ul = document.getElementById("insights");
+
+    const ul =
+      document.getElementById("insights");
+
     ul.textContent = "";
+
     for (const text of list) {
-      const li = document.createElement("li");
+
+      const li =
+        document.createElement("li");
+
       li.textContent = text;
+
       ul.appendChild(li);
+
     }
+
   }
+
 
   async function refresh() {
-    const status = document.getElementById("status");
-    const dayQuery = selectedDay ? "day=" + selectedDay : "";
+
+    const status =
+      document.getElementById("status");
+
+    const dayQuery =
+      selectedDay
+        ? "day=" + selectedDay
+        : "";
+
     try {
+
       if (selectedDay === null) {
-        dayInput.max = todayString();
-        dayInput.value = todayString();
-        document.getElementById("mode").textContent = "Showing today (live)";
+
+        dayInput.max =
+          todayString();
+
+        dayInput.value =
+          todayString();
+
+        document.getElementById(
+          "mode"
+        ).textContent =
+          "Showing today (live)";
+
       } else {
-        document.getElementById("mode").textContent = "Showing history for " + selectedDay;
+
+        document.getElementById(
+          "mode"
+        ).textContent =
+          "Showing history for " +
+          selectedDay;
+
       }
 
-      const stats = await (await fetch("/stats?" + dayQuery)).json();
-      document.getElementById("entered").textContent = stats.entered;
-      document.getElementById("exited").textContent = stats.exited;
-      document.getElementById("inside").textContent = stats.inside;
 
-      const analytics = await (await fetch("/analytics?" + dayQuery)).json();
-      document.getElementById("storedwell").textContent = formatDuration(analytics.store.avg_dwell_seconds);
-      renderHeatmap(stats, analytics);
-      renderZones(stats, analytics);
-      renderInsights(analytics.insights);
+      const stats =
+        await (
+          await fetch(
+            "/stats?" + dayQuery
+          )
+        ).json();
 
-      renderHourly(await (await fetch("/hourly?" + dayQuery)).json());
 
-      const events = await (await fetch("/events?limit=10&" + dayQuery)).json();
-      const feed = document.getElementById("feed");
+      document.getElementById(
+        "entered"
+      ).textContent =
+        stats.entered;
+
+
+      document.getElementById(
+        "exited"
+      ).textContent =
+        stats.exited;
+
+
+      document.getElementById(
+        "inside"
+      ).textContent =
+        stats.inside;
+
+
+      const analytics =
+        await (
+          await fetch(
+            "/analytics?" + dayQuery
+          )
+        ).json();
+
+
+      document.getElementById(
+        "storedwell"
+      ).textContent =
+        formatDuration(
+          analytics.store.avg_dwell_seconds
+        );
+
+
+      renderHeatmap(
+        stats,
+        analytics
+      );
+
+
+      renderInsights(
+        analytics.insights
+      );
+
+
+      renderHourly(
+        await (
+          await fetch(
+            "/hourly?" + dayQuery
+          )
+        ).json()
+      );
+
+
+      const events =
+        await (
+          await fetch(
+            "/events?limit=10&" +
+            dayQuery
+          )
+        ).json();
+
+
+      const feed =
+        document.getElementById(
+          "feed"
+        );
+
       feed.textContent = "";
+
+
       for (const e of events) {
-        const row = document.createElement("div");
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
         row.className = "event";
-        const t = document.createElement("span");
+
+
+        const t =
+          document.createElement(
+            "span"
+          );
+
         t.className = "time";
-        t.textContent = e.time.slice(11, 19);
-        const tag = document.createElement("span");
-        tag.className = "tag " + e.type;
-        tag.textContent = e.type;
-        const where = document.createElement("span");
-        where.textContent = e.zone;
-        row.append(t, tag, where);
+
+        t.textContent =
+          e.time.slice(11, 19);
+
+
+        const tag =
+          document.createElement(
+            "span"
+          );
+
+        tag.className =
+          "tag " + e.type;
+
+        tag.textContent =
+          e.type;
+
+
+        const where =
+          document.createElement(
+            "span"
+          );
+
+        where.textContent =
+          e.zone;
+
+
+        row.append(
+          t,
+          tag,
+          where
+        );
+
         feed.appendChild(row);
+
       }
 
-      status.textContent = "● live";
-      status.style.color = "#10b981";
+
+      status.textContent =
+        "● live";
+
+      status.style.color =
+        "#10b981";
+
     } catch (error) {
-      status.textContent = "● offline";
-      status.style.color = "#ef4444";
+
+      status.textContent =
+        "● offline";
+
+      status.style.color =
+        "#ef4444";
+
     }
+
   }
+
+
   refresh();
-  setInterval(refresh, 2000);
+
+  setInterval(
+    refresh,
+    2000
+  );
+
 </script>
+
 </body>
 </html>
