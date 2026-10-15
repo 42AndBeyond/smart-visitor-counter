@@ -1,97 +1,209 @@
+
 import argparse
 import random
 import time
 from datetime import datetime
+from urllib.parse import urlencode
+
 import requests
 
-# Define zones and possible event types matching backend configuration
+
 ZONES = ["grocery", "snacks", "freezer"]
+BASE_URL = "http://127.0.0.1:8000"
 
+# Keep track of simulated visitors and their current zones.
 def run_simulation(session_id: str):
-    base_url = f"http://localhost:8000/event?session_id={session_id}"
-    print(f"Starting customer simulator for session: {session_id}")
+    params = urlencode({"session_id": session_id})
+    event_url = f"{BASE_URL}/event?{params}"
 
-    # Track active simulated visitors to manage realistic exits and zone transitions
+    print(f"Starting customer simulator for session: {session_id}", flush=True)
+    print(f"Sending events to: {event_url}", flush=True)
+
     active_visitors = {}
+    visitor_number = 0
 
-    while True:
-        try:
-            # Decide whether to spawn a new visitor, move an existing one, or have someone leave
-            action_choice = random.choice(["spawn", "move", "exit"])
+    with requests.Session() as client:
+        while True:
+            try:
+                action = random.choice(["spawn", "move", "exit"])
 
-            current_time = datetime.now().isoformat()
+                # Spawn a visitor if needed.
+                if action == "spawn" or not active_visitors:
+                    visitor_number += 1
+                    device_id = f"visitor_{session_id}_{visitor_number}"
 
-            if action_choice == "spawn" or not active_visitors:
-                # Spawn a new visitor entering the store
-                device_id = f"dev_{random.randint(1000, 9999)}"
-                if device_id not in active_visitors:
-                    active_visitors[device_id] = {"zone": None}
                     payload = {
                         "type": "ENTRY",
                         "zone": "entrance",
                         "device": device_id,
-                        "time": current_time
+                        "time": datetime.now().isoformat(),
                     }
-                    requests.post(base_url, json=payload, timeout=2)
 
-            elif action_choice == "move" and active_visitors:
-                # Pick a random active visitor to move into a zone
-                device_id = random.choice(list(active_visitors.keys()))
-                zone = random.choice(ZONES)
-                
-                # If they were already in a zone, leave it first
-                old_zone = active_visitors[device_id]["zone"]
-                if old_zone and old_zone != zone:
-                    leave_payload = {
-                        "type": "ZONE_LEAVE",
-                        "zone": old_zone,
+                    response = client.post(
+                        event_url, json=payload, timeout=5
+                    )
+
+                    if response.ok:
+                        active_visitors[device_id] = {"zone": None}
+                        print(
+                            f"ENTRY accepted: {device_id}",
+                            flush=True,
+                        )
+                    else:
+                        print(
+                            f"ENTRY rejected ({response.status_code}): "
+                            f"{response.text}",
+                            flush=True,
+                        )
+
+                elif action == "move" and active_visitors:
+                    device_id = random.choice(
+                        list(active_visitors.keys())
+                    )
+                    old_zone = active_visitors[device_id]["zone"]
+                    new_zone = random.choice(ZONES)
+
+                    if old_zone == new_zone:
+                        time.sleep(1)
+                        continue
+
+                    # Leave the previous zone first.
+                    if old_zone is not None:
+                        leave_payload = {
+                            "type": "ZONE_LEAVE",
+                            "zone": old_zone,
+                            "device": device_id,
+                            "time": datetime.now().isoformat(),
+                        }
+
+                        response = client.post(
+                            event_url,
+                            json=leave_payload,
+                            timeout=5,
+                        )
+
+                        if not response.ok:
+                            print(
+                                f"ZONE_LEAVE rejected "
+                                f"({response.status_code}): "
+                                f"{response.text}",
+                                flush=True,
+                            )
+                            time.sleep(1)
+                            continue
+
+                    # Enter the new zone.
+                    enter_payload = {
+                        "type": "ZONE_ENTER",
+                        "zone": new_zone,
                         "device": device_id,
-                        "time": current_time
+                        "time": datetime.now().isoformat(),
                     }
-                    requests.post(base_url, json=leave_payload, timeout=2)
 
-                # Enter new zone
-                active_visitors[device_id]["zone"] = zone
-                enter_payload = {
-                    "type": "ZONE_ENTER",
-                    "zone": zone,
-                    "device": device_id,
-                    "time": current_time
-                }
-                requests.post(base_url, json=enter_payload, timeout=2)
+                    response = client.post(
+                        event_url,
+                        json=enter_payload,
+                        timeout=5,
+                    )
 
-            elif action_choice == "exit" and active_visitors:
-                # Remove and exit a random visitor
-                device_id = random.choice(list(active_visitors.keys()))
-                old_zone = active_visitors[device_id]["zone"]
-                
-                if old_zone:
-                    leave_payload = {
-                        "type": "ZONE_LEAVE",
-                        "zone": old_zone,
+                    if response.ok:
+                        active_visitors[device_id]["zone"] = new_zone
+                        print(
+                            f"ZONE_ENTER accepted: "
+                            f"{device_id} -> {new_zone}",
+                            flush=True,
+                        )
+                    else:
+                        print(
+                            f"ZONE_ENTER rejected "
+                            f"({response.status_code}): "
+                            f"{response.text}",
+                            flush=True,
+                        )
+
+                elif action == "exit" and active_visitors:
+                    device_id = random.choice(
+                        list(active_visitors.keys())
+                    )
+                    old_zone = active_visitors[device_id]["zone"]
+
+                    # Leave the current zone before exiting the store.
+                    if old_zone is not None:
+                        leave_payload = {
+                            "type": "ZONE_LEAVE",
+                            "zone": old_zone,
+                            "device": device_id,
+                            "time": datetime.now().isoformat(),
+                        }
+
+                        response = client.post(
+                            event_url,
+                            json=leave_payload,
+                            timeout=5,
+                        )
+
+                        if not response.ok:
+                            print(
+                                f"ZONE_LEAVE rejected "
+                                f"({response.status_code}): "
+                                f"{response.text}",
+                                flush=True,
+                            )
+                            time.sleep(1)
+                            continue
+
+                    exit_payload = {
+                        "type": "EXIT",
+                        "zone": "exit",
                         "device": device_id,
-                        "time": current_time
+                        "time": datetime.now().isoformat(),
                     }
-                    requests.post(base_url, json=leave_payload, timeout=2)
 
-                exit_payload = {
-                    "type": "EXIT",
-                    "zone": "exit",
-                    "device": device_id,
-                    "time": current_time
-                }
-                requests.post(base_url, json=exit_payload, timeout=2)
-                del active_visitors[device_id]
+                    response = client.post(
+                        event_url,
+                        json=exit_payload,
+                        timeout=5,
+                    )
 
-        except Exception as e:
-            print(f"Simulator error: {e}")
+                    if response.ok:
+                        del active_visitors[device_id]
+                        print(
+                            f"EXIT accepted: {device_id}",
+                            flush=True,
+                        )
+                    else:
+                        print(
+                            f"EXIT rejected ({response.status_code}): "
+                            f"{response.text}",
+                            flush=True,
+                        )
 
-        # Control frequency of simulated actions
-        time.sleep(random.uniform(0.8, 2.0))
+            except requests.RequestException as error:
+                print(
+                    f"Cannot contact backend: {error}",
+                    flush=True,
+                )
+
+            except Exception as error:
+                print(
+                    f"Simulator error: {error}",
+                    flush=True,
+                )
+
+            time.sleep(random.uniform(0.8, 1.5))
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Smart Store Customer Simulator")
-    parser.add_argument("--session", type=str, default="default", help="Session ID for isolated telemetry data")
+    parser = argparse.ArgumentParser(
+        description="Smart Store Customer Simulator"
+    )
+
+    parser.add_argument(
+        "--session",
+        type=str,
+        default="default",
+        help="Session ID for isolated telemetry data",
+    )
+
     args = parser.parse_args()
-    
     run_simulation(args.session)

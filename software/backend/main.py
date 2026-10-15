@@ -1,11 +1,12 @@
+
 from __future__ import annotations
+
 import sqlite3
 import threading
 from datetime import date, datetime
 from pathlib import Path
 import subprocess
 import sys
-import os
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
@@ -16,29 +17,42 @@ app = FastAPI()
 
 ZONES = ["grocery", "snacks", "freezer"]
 EVENT_TYPES = ["ENTRY", "EXIT", "ZONE_ENTER", "ZONE_LEAVE"]
+
 lock = threading.Lock()
 
-# Dictionary to keep track of simulator processes per session: {session_id: subprocess.Popen}
+# Store simulator processes by session ID
 simulator_processes = {}
 
 
+# Database
 def get_db(session_id: str = "default"):
-    safe_session_id = "".join(c for c in session_id if c.isalnum() or c in ("_", "-"))
+    safe_session_id = "".join(
+        c for c in session_id
+        if c.isalnum() or c in ("_", "-")
+    )
+
     if not safe_session_id:
         safe_session_id = "default"
-    
-    db_path = Path(__file__).parent / f"visitors_{safe_session_id}.db"
+
+    db_path = (
+        Path(__file__).parent
+        / f"visitors_{safe_session_id}.db"
+    )
+
     db = sqlite3.connect(db_path)
-    
+
     db.execute(
-        """CREATE TABLE IF NOT EXISTS events (
+        """
+        CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             type TEXT NOT NULL,
             zone TEXT NOT NULL,
             device TEXT NOT NULL,
             time TEXT NOT NULL
-        )"""
+        )
+        """
     )
+
     db.commit()
     return db
 
@@ -46,6 +60,7 @@ def get_db(session_id: str = "default"):
 def pick_day(day):
     if day is None:
         return date.today().isoformat()
+
     try:
         return date.fromisoformat(day).isoformat()
     except ValueError:
@@ -56,7 +71,11 @@ def pick_day(day):
 
 
 def count(db, event_type, day, zone=None):
-    sql = "SELECT COUNT(*) FROM events WHERE type = ? AND substr(time, 1, 10) = ?"
+    sql = (
+        "SELECT COUNT(*) FROM events "
+        "WHERE type = ? AND substr(time, 1, 10) = ?"
+    )
+
     params = [event_type, day]
 
     if zone is not None:
@@ -91,7 +110,9 @@ def average_dwell(db, enter_type, leave_type, day, zone=None):
 
     for event_type, value in rows:
         try:
-            current_time = datetime.fromisoformat(value).replace(tzinfo=None)
+            current_time = datetime.fromisoformat(
+                value
+            ).replace(tzinfo=None)
         except ValueError:
             continue
 
@@ -123,21 +144,32 @@ def average_dwell(db, enter_type, leave_type, day, zone=None):
 
 def build_insights(zones, total_visits):
     if total_visits < 5:
-        return ["Not enough data yet. Insights appear after a few zone visits."]
+        return [
+            "Not enough data yet. Insights appear after a few zone visits."
+        ]
 
     insights = []
 
-    busiest = max(zones, key=lambda z: zones[z]["visits"])
-    quietest = min(zones, key=lambda z: zones[z]["visits"])
+    busiest = max(
+        zones,
+        key=lambda z: zones[z]["visits"]
+    )
+
+    quietest = min(
+        zones,
+        key=lambda z: zones[z]["visits"]
+    )
 
     insights.append(
-        f"Busiest zone: {busiest} ({zones[busiest]['share_percent']}% of zone visits). "
+        f"Busiest zone: {busiest} "
+        f"({zones[busiest]['share_percent']}% of zone visits). "
         "A good spot for high-margin or featured products."
     )
 
     if zones[busiest]["visits"] != zones[quietest]["visits"]:
         insights.append(
-            f"Quietest zone: {quietest} ({zones[quietest]['share_percent']}%). "
+            f"Quietest zone: {quietest} "
+            f"({zones[quietest]['share_percent']}%). "
             "Consider promotions or signage to bring more shoppers here."
         )
 
@@ -173,18 +205,26 @@ class Event(BaseModel):
 
 @app.get("/")
 def home():
-    return {"message": "Smart Visitor Counter backend is running"}
+    return {
+        "message": "Smart Visitor Counter backend is running"
+    }
 
 
 @app.post("/event")
-def receive_event(event: Event, session_id: str = Query("default")):
+def receive_event(
+    event: Event,
+    session_id: str = Query("default")
+):
     if event.type not in EVENT_TYPES:
         raise HTTPException(
             status_code=400,
             detail="Unknown event type"
         )
 
-    if event.type in ("ZONE_ENTER", "ZONE_LEAVE") and event.zone not in ZONES:
+    if (
+        event.type in ("ZONE_ENTER", "ZONE_LEAVE")
+        and event.zone not in ZONES
+    ):
         raise HTTPException(
             status_code=400,
             detail="Unknown zone"
@@ -197,7 +237,10 @@ def receive_event(event: Event, session_id: str = Query("default")):
 
         try:
             if event.type == "EXIT":
-                inside = count(db, "ENTRY", day) - count(db, "EXIT", day)
+                inside = (
+                    count(db, "ENTRY", day)
+                    - count(db, "EXIT", day)
+                )
 
                 if inside <= 0:
                     raise HTTPException(
@@ -218,7 +261,10 @@ def receive_event(event: Event, session_id: str = Query("default")):
                     )
 
             db.execute(
-                "INSERT INTO events (type, zone, device, time) VALUES (?, ?, ?, ?)",
+                """
+                INSERT INTO events (type, zone, device, time)
+                VALUES (?, ?, ?, ?)
+                """,
                 (
                     event.type,
                     event.zone,
@@ -236,7 +282,10 @@ def receive_event(event: Event, session_id: str = Query("default")):
 
 
 @app.get("/stats")
-def get_stats(session_id: str = Query("default"), day: Optional[str] = None):
+def get_stats(
+    session_id: str = Query("default"),
+    day: Optional[str] = None
+):
     day = pick_day(day)
     db = get_db(session_id)
 
@@ -252,10 +301,7 @@ def get_stats(session_id: str = Query("default"), day: Optional[str] = None):
             zones[z] = {
                 "visits": visits,
                 "inside": visits - count(
-                    db,
-                    "ZONE_LEAVE",
-                    day,
-                    z
+                    db, "ZONE_LEAVE", day, z
                 ),
             }
 
@@ -272,16 +318,24 @@ def get_stats(session_id: str = Query("default"), day: Optional[str] = None):
 
 
 @app.get("/events")
-def latest_events(session_id: str = Query("default"), limit: int = 20, day: Optional[str] = None):
+def latest_events(
+    session_id: str = Query("default"),
+    limit: int = 20,
+    day: Optional[str] = None
+):
     day = pick_day(day)
     limit = max(1, min(limit, 200))
     db = get_db(session_id)
 
     try:
         rows = db.execute(
-            "SELECT id, type, zone, device, time FROM events "
-            "WHERE substr(time, 1, 10) = ? "
-            "ORDER BY id DESC LIMIT ?",
+            """
+            SELECT id, type, zone, device, time
+            FROM events
+            WHERE substr(time, 1, 10) = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
             (day, limit),
         ).fetchall()
 
@@ -301,17 +355,22 @@ def latest_events(session_id: str = Query("default"), limit: int = 20, day: Opti
 
 
 @app.get("/hourly")
-def hourly_flow(session_id: str = Query("default"), day: Optional[str] = None):
+def hourly_flow(
+    session_id: str = Query("default"),
+    day: Optional[str] = None
+):
     day = pick_day(day)
     db = get_db(session_id)
 
     try:
         rows = db.execute(
-            "SELECT substr(time, 12, 2) AS hour, COUNT(*) "
-            "FROM events "
-            "WHERE type = 'ENTRY' "
-            "AND substr(time, 1, 10) = ? "
-            "GROUP BY hour",
+            """
+            SELECT substr(time, 12, 2) AS hour, COUNT(*)
+            FROM events
+            WHERE type = 'ENTRY'
+              AND substr(time, 1, 10) = ?
+            GROUP BY hour
+            """,
             (day,),
         ).fetchall()
 
@@ -349,35 +408,28 @@ def hourly_flow(session_id: str = Query("default"), day: Optional[str] = None):
 
 
 @app.get("/analytics")
-def analytics(session_id: str = Query("default"), day: Optional[str] = None):
+def analytics(
+    session_id: str = Query("default"),
+    day: Optional[str] = None
+):
     day = pick_day(day)
     db = get_db(session_id)
 
     try:
         store_avg, store_pairs = average_dwell(
-            db,
-            "ENTRY",
-            "EXIT",
-            day
+            db, "ENTRY", "EXIT", day
         )
 
         zones = {}
 
         for z in ZONES:
             avg, pairs = average_dwell(
-                db,
-                "ZONE_ENTER",
-                "ZONE_LEAVE",
-                day,
-                z
+                db, "ZONE_ENTER", "ZONE_LEAVE", day, z
             )
 
             zones[z] = {
                 "visits": count(
-                    db,
-                    "ZONE_ENTER",
-                    day,
-                    z
+                    db, "ZONE_ENTER", day, z
                 ),
                 "avg_dwell_seconds": avg,
                 "completed_stays": pairs,
@@ -387,15 +439,12 @@ def analytics(session_id: str = Query("default"), day: Optional[str] = None):
         db.close()
 
     total_visits = sum(
-        z["visits"]
-        for z in zones.values()
+        z["visits"] for z in zones.values()
     )
 
     for z in zones.values():
         z["share_percent"] = (
-            round(
-                z["visits"] * 100 / total_visits
-            )
+            round(z["visits"] * 100 / total_visits)
             if total_visits
             else 0
         )
@@ -407,45 +456,80 @@ def analytics(session_id: str = Query("default"), day: Optional[str] = None):
             "completed_visits": store_pairs,
         },
         "zones": zones,
-        "insights": build_insights(
-            zones,
-            total_visits
-        ),
+        "insights": build_insights(zones, total_visits),
     }
 
 
+# Simulator controls
 @app.post("/api/simulator/start")
 @app.post("/api/simulator/start/")
-def start_simulator(session_id: str = Query("default")):
+def start_simulator(
+    session_id: str = Query("default")
+):
     global simulator_processes
-    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
+
+    if (
+        session_id in simulator_processes
+        and simulator_processes[session_id].poll() is None
+    ):
         return {"status": "Simulator is already running"}
-    
-    sim_path = Path(__file__).parent / "simulator.py"
-    if not sim_path.exists():
-        raise HTTPException(status_code=404, detail="simulator.py not found")
-        
+
+    # Correct path: software/simulator/simulator.py
+    sim_path = (
+        Path(__file__).parent.parent
+        / "simulator"
+        / "simulator.py"
+    )
+
+    if not sim_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Simulator file not found at: {sim_path}"
+        )
+
     proc = subprocess.Popen(
-        [sys.executable, str(sim_path), "--session", session_id],
+        [
+            sys.executable,
+            str(sim_path),
+            "--session",
+            session_id
+        ],
+        cwd=str(sim_path.parent),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
+
     simulator_processes[session_id] = proc
-    return {"status": "started", "session_id": session_id}
+
+    return {
+        "status": "started",
+        "session_id": session_id
+    }
 
 
 @app.post("/api/simulator/stop")
 @app.post("/api/simulator/stop/")
-def stop_simulator(session_id: str = Query("default")):
+def stop_simulator(
+    session_id: str = Query("default")
+):
     global simulator_processes
-    if session_id in simulator_processes and simulator_processes[session_id].poll() is None:
+
+    if (
+        session_id in simulator_processes
+        and simulator_processes[session_id].poll() is None
+    ):
         simulator_processes[session_id].terminate()
         del simulator_processes[session_id]
+
         return {"status": "stopped"}
+
     return {"status": "Simulator is not running"}
 
 
-DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
+# Dashboard
+DASHBOARD_DIR = (
+    Path(__file__).parent.parent / "dashboard"
+)
 
 app.mount(
     "/dashboard",

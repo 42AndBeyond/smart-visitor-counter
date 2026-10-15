@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 
@@ -76,9 +77,9 @@
 
     .controls {
       display: flex;
-      gap: 12px;
-      align-items: center;
+      gap: 16px;
       flex-wrap: wrap;
+      align-items: center;
       margin-bottom: 4px;
     }
 
@@ -132,21 +133,10 @@
       width: 110px;
     }
 
-    .ENTRY {
-      color: #10b981;
-    }
-
-    .EXIT {
-      color: #ef4444;
-    }
-
-    .ZONE_ENTER {
-      color: #3b82f6;
-    }
-
-    .ZONE_LEAVE {
-      color: #f97316;
-    }
+    .ENTRY { color: #10b981; }
+    .EXIT { color: #ef4444; }
+    .ZONE_ENTER { color: #3b82f6; }
+    .ZONE_LEAVE { color: #f97316; }
 
     .chart {
       display: flex;
@@ -309,15 +299,20 @@
 
   <!-- Simulation Control Panel -->
   <div style="margin: 16px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <button onclick="controlSimulator('start')" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">▶ Start Simulation</button>
-      <button onclick="controlSimulator('stop')" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">⏹ Stop Simulation</button>
-      <span id="sim-status" style="color: #a0aec0; font-size: 14px;">Status: Idle</span>
+    <button onclick="controlSimulator('start')" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+      ▶ Start Simulation
+    </button>
+
+    <button onclick="controlSimulator('stop')" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+      ⏹ Stop Simulation
+    </button>
+
+    <span id="sim-status" style="color: #a0aec0; font-size: 14px;">Status: Idle</span>
   </div>
 
   <h2>Overall</h2>
 
   <div class="row">
-
     <div class="card">
       <div class="big" id="entered">0</div>
       <div class="label">Entered</div>
@@ -337,17 +332,14 @@
       <div class="big" id="storedwell">-</div>
       <div class="label">Avg completed visit</div>
     </div>
-
   </div>
 
   <h2>Store layout heatmap</h2>
 
   <div class="floor">
-
     <div class="zonemap" id="zonemap"></div>
 
     <div class="doors">
-
       <div class="door in">
         ENTRANCE · <span id="doorIn">0</span> in
       </div>
@@ -355,9 +347,7 @@
       <div class="door out">
         EXIT · <span id="doorOut">0</span> out
       </div>
-
     </div>
-
   </div>
 
   <div class="legend">
@@ -368,43 +358,47 @@
   </div>
 
   <h2>Zone insights</h2>
-
   <ul class="insights" id="insights"></ul>
 
   <h2>Hourly visitor flow</h2>
-
   <div class="chart" id="chart"></div>
-
   <div class="label" id="peak"></div>
 
   <h2>Live events</h2>
-
   <div class="feed" id="feed"></div>
 
 </main>
 
 <script>
-  let sessionId = localStorage.getItem('visitor_session_id');
+  let sessionId = localStorage.getItem("visitor_session_id");
+
   if (!sessionId) {
-      sessionId = 'user_' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem('visitor_session_id', sessionId);
+    sessionId = "user_" + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem("visitor_session_id", sessionId);
   }
 
   let selectedDay = null;
+
   const dayInput = document.getElementById("day");
   const MAP_ORDER = ["grocery", "snacks", "freezer"];
 
   function todayString() {
-    return new Date().toLocaleDateString("en-CA");
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
   function formatDuration(seconds) {
     if (seconds === null || seconds === undefined) {
       return "-";
     }
+
     if (seconds < 60) {
       return Math.round(seconds) + "s";
     }
+
     return Math.floor(seconds / 60) +
       "m " +
       Math.round(seconds % 60) +
@@ -413,6 +407,7 @@
 
   function heatColor(t) {
     const hue = 210 - 205 * t;
+
     return "hsl(" +
       hue +
       ", " +
@@ -424,10 +419,10 @@
 
   dayInput.addEventListener("change", () => {
     selectedDay =
-      dayInput.value &&
-      dayInput.value !== todayString()
+      dayInput.value && dayInput.value !== todayString()
         ? dayInput.value
         : null;
+
     refresh();
   });
 
@@ -436,17 +431,32 @@
     refresh();
   });
 
+  // Updated simulator control function
   async function controlSimulator(action) {
-      const statusEl = document.getElementById('sim-status');
-      statusEl.innerText = `Status: ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
-      try {
-          const response = await fetch(`http://54.160.208.65:8000/api/simulator/${action}/?session_id=${sessionId}`, { method: 'POST' });
-          const data = await response.json();
-          statusEl.innerText = `Status: ${data.status}`;
-      } catch (err) {
-          statusEl.innerText = `Status: Error connecting to server`;
-          console.error(err);
+    const statusEl = document.getElementById("sim-status");
+
+    statusEl.innerText =
+      `Status: ${action === "start" ? "Starting..." : "Stopping..."}`;
+
+    try {
+      const response = await fetch(
+        `/api/simulator/${action}/?session_id=${encodeURIComponent(sessionId)}`,
+        { method: "POST" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || `HTTP ${response.status}`);
       }
+
+      statusEl.innerText = `Status: ${data.status}`;
+      await refresh();
+
+    } catch (err) {
+      statusEl.innerText = `Status: Error - ${err.message}`;
+      console.error("Simulator control failed:", err);
+    }
   }
 
   function renderHeatmap(stats, analytics) {
@@ -455,9 +465,7 @@
 
     const maxVisits = Math.max(
       1,
-      ...MAP_ORDER.map(
-        n => stats.zones[n].visits
-      )
+      ...MAP_ORDER.map(name => stats.zones[name].visits)
     );
 
     for (const name of MAP_ORDER) {
@@ -478,7 +486,8 @@
 
       const num = document.createElement("div");
       num.className = "znum";
-      num.textContent = z.visits + " visits (" + (a ? a.share_percent : 0) + "%)";
+      num.textContent =
+        z.visits + " visits (" + (a ? a.share_percent : 0) + "%)";
 
       const sub = document.createElement("div");
       sub.className = "zsub";
@@ -501,14 +510,13 @@
 
     const max = Math.max(
       1,
-      ...data.hours.map(
-        h => h.visitors
-      )
+      ...data.hours.map(hour => hour.visitors)
     );
 
     for (const h of data.hours) {
       const col = document.createElement("div");
       col.className = "col";
+
       col.title =
         String(h.hour).padStart(2, "0") +
         ":00 - " +
@@ -520,27 +528,21 @@
 
       const bar = document.createElement("div");
       bar.className =
-        "bar" +
-        (h.hour === data.peak_hour
-          ? " peak"
-          : "");
+        "bar" + (h.hour === data.peak_hour ? " peak" : "");
 
-      bar.style.height =
-        (h.visitors / max * 100) +
-        "%";
-
+      bar.style.height = (h.visitors / max * 100) + "%";
       box.appendChild(bar);
 
       const label = document.createElement("div");
       label.className = "hlabel";
-      label.textContent =
-        String(h.hour).padStart(2, "0");
+      label.textContent = String(h.hour).padStart(2, "0");
 
       col.append(box, label);
       chart.appendChild(col);
     }
 
     const peak = document.getElementById("peak");
+
     if (data.peak_hour === null) {
       peak.textContent = "Peak hour: no visitors yet";
     } else {
@@ -572,9 +574,11 @@
 
   async function refresh() {
     const status = document.getElementById("status");
-    let dayQuery = `session_id=${sessionId}`;
+
+    let dayQuery = `session_id=${encodeURIComponent(sessionId)}`;
+
     if (selectedDay) {
-      dayQuery += `&day=${selectedDay}`;
+      dayQuery += `&day=${encodeURIComponent(selectedDay)}`;
     }
 
     try {
@@ -583,28 +587,55 @@
         dayInput.value = todayString();
         document.getElementById("mode").textContent = "Showing today (live)";
       } else {
-        document.getElementById("mode").textContent = "Showing history for " + selectedDay;
+        document.getElementById("mode").textContent =
+          "Showing history for " + selectedDay;
       }
 
-      const stats = await (await fetch("/stats?" + dayQuery)).json();
+      const statsResponse = await fetch("/stats?" + dayQuery);
+
+      if (!statsResponse.ok) {
+        throw new Error(`Stats request failed: HTTP ${statsResponse.status}`);
+      }
+
+      const stats = await statsResponse.json();
+
       document.getElementById("entered").textContent = stats.entered;
       document.getElementById("exited").textContent = stats.exited;
       document.getElementById("inside").textContent = stats.inside;
 
-      const analytics = await (await fetch("/analytics?" + dayQuery)).json();
-      document.getElementById("storedwell").textContent = formatDuration(
-        analytics.store.avg_dwell_seconds
-      );
+      const analyticsResponse = await fetch("/analytics?" + dayQuery);
+
+      if (!analyticsResponse.ok) {
+        throw new Error(`Analytics request failed: HTTP ${analyticsResponse.status}`);
+      }
+
+      const analytics = await analyticsResponse.json();
+
+      document.getElementById("storedwell").textContent =
+        formatDuration(analytics.store.avg_dwell_seconds);
 
       renderHeatmap(stats, analytics);
       renderInsights(analytics.insights);
 
-      renderHourly(
-        await (await fetch("/hourly?" + dayQuery)).json()
+      const hourlyResponse = await fetch("/hourly?" + dayQuery);
+
+      if (!hourlyResponse.ok) {
+        throw new Error(`Hourly request failed: HTTP ${hourlyResponse.status}`);
+      }
+
+      renderHourly(await hourlyResponse.json());
+
+      const eventsResponse = await fetch(
+        "/events?limit=10&" + dayQuery
       );
 
-      const events = await (await fetch("/events?limit=10&" + dayQuery)).json();
+      if (!eventsResponse.ok) {
+        throw new Error(`Events request failed: HTTP ${eventsResponse.status}`);
+      }
+
+      const events = await eventsResponse.json();
       const feed = document.getElementById("feed");
+
       feed.textContent = "";
 
       for (const e of events) {
@@ -632,6 +663,7 @@
     } catch (error) {
       status.textContent = "● offline";
       status.style.color = "#ef4444";
+      console.error("Dashboard refresh failed:", error);
     }
   }
 
@@ -641,3 +673,4 @@
 
 </body>
 </html>
+```
