@@ -1,127 +1,71 @@
 # Smart Visitor Counter
-### Turning visitor activity into meaningful store insights.
 
-A smart visitor monitoring application that simulates store footfall, tracks visitor activity, and transforms event data into meaningful statistics through an interactive web dashboard.
+A smart visitor monitoring system for tracking and analysing store footfall through a web-based dashboard.
 
----
+## About the Project
 
-## 01 — The Idea
+Smart Visitor Counter simulates visitor activity in a store and displays the collected data through an interactive dashboard. It uses a Python backend to manage visitor events and a database to store activity records.
 
-Understanding how people move through a store can help make better operational decisions.
+The dashboard provides a view of visitor counts, hourly activity, recent events and date-based analytics.
 
-**Smart Visitor Counter** provides a centralized system for monitoring visitor activity in a store environment. It combines an event-generation simulator, a Python-based backend, and a web dashboard to make visitor data easier to observe, track, and analyze.
+## Features
 
-The application currently uses simulated visitor events to demonstrate the monitoring and analytics workflow.
+- **Visitor Simulation** – Generate visitor events with start and stop controls.
+- **Live Monitoring** – View visitor counts and activity updates.
+- **Analytics** – Explore hourly visitor patterns and activity statistics.
+- **Event History** – Access recently recorded visitor events.
+- **Date Filtering** – View activity for a selected date.
 
-## 02 — Core Capabilities
-
-| Capability | Description |
-|---|---|
-| Visitor Simulation | Generate visitor events with start and stop controls. |
-| Live Monitoring | Observe visitor activity through the dashboard. |
-| Footfall Statistics | Track visitor counts and activity summaries. |
-| Activity Analytics | Explore visitor trends and hourly patterns. |
-| Event Tracking | Inspect recent visitor events. |
-| Date-Based Analysis | View activity for selected dates. |
-| API Integration | Retrieve dashboard data and control simulation through REST endpoints. |
-
-## 03 — System Architecture
-
-The application follows a simple backend–frontend architecture.
+## How It Works
 
 ```text
-       VISITOR EVENT SIMULATOR
-                 |
-                 v
-          PYTHON BACKEND
-              FastAPI
-                 |
-          +------+------+
-          |             |
-          v             v
-       SQLite       REST APIs
-                        |
-                        v
-                WEB DASHBOARD
-                HTML / CSS / JS
-                        |
-                        v
-               VISITOR INSIGHTS
+Visitor Simulator
+       ↓
+  FastAPI Backend
+       ↓
+    SQLite DB
+       ↓
+  Web Dashboard
+       ↓
+ Visitor Analytics
 ```
 
-## 04 — Technology Stack
+## Technologies
 
-| Layer | Technologies |
+| Area | Tools |
 |---|---|
 | Backend | Python, FastAPI |
 | Frontend | HTML, CSS, JavaScript |
 | Database | SQLite |
-| Communication | REST API |
+| Cloud | AWS |
 | Version Control | Git, GitHub |
-| Cloud Platform | AWS |
 
-## 05 — Project Structure
+## Run Locally
 
-```text
-smart-visitor-counter/
-│
-├── software/
-│   ├── backend/
-│   │   ├── main.py
-│   │   └── simulator.py
-│   │
-│   └── dashboard/
-│       └── index.html
-│
-└── README.md
-```
-
-## 06 — Getting Started
-
-### Prerequisites
-
-- Python
-- Git
-
-### Clone the Repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/42AndBeyond/smart-visitor-counter.git
 cd smart-visitor-counter/software
 ```
 
-### Set Up the Environment
-
-For Windows CMD:
+Create and activate a virtual environment:
 
 ```cmd
 python -m venv backend\venv
 backend\venv\Scripts\activate
 ```
 
-Install the dependencies listed in the project's dependency file.
-
-### Launch the Application
+Install the project dependencies, then start the backend:
 
 ```bash
 uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-### Open the Dashboard
+Open the dashboard:
 
-Navigate to:
-
-http://127.0.0.1:8000/dashboard/
-
-Start the visitor simulation and explore the dashboard's monitoring and analytics features.
-
-## 07 — Project Direction
-
-The application demonstrates how event simulation, backend services, data storage, and dashboard visualizations can work together in a visitor-monitoring system.
-
-Its architecture also provides a foundation for exploring cloud-hosted monitoring and future integration with real-world visitor-counting hardware.
+`http://127.0.0.1:8000/dashboard/`
 
 ---
 
-**Smart Visitor Counter**  
-*Observe. Track. Understand.*
+**Note:** Visitor activity is currently generated using a simulator rather than physical counting sensors.
