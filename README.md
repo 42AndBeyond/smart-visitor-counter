@@ -4,9 +4,9 @@ A smart visitor monitoring system for tracking and analysing store footfall thro
 
 ## About the Project
 
-Smart Visitor Counter simulates visitor activity in a store and displays the collected data through an interactive dashboard. It uses a Python backend to manage visitor events and a database to store activity records.
+Smart Visitor Counter simulates visitor activity in a store and displays the collected data through an interactive dashboard. It uses a Python backend to manage visitor events and an SQLite database to store activity records.
 
-The dashboard provides a view of visitor counts, hourly activity, recent events and date-based analytics.
+The dashboard provides an overview of visitor counts, hourly activity, recent events and date-based analytics.
 
 ## Features
 
@@ -15,6 +15,8 @@ The dashboard provides a view of visitor counts, hourly activity, recent events 
 - **Analytics** – Explore hourly visitor patterns and activity statistics.
 - **Event History** – Access recently recorded visitor events.
 - **Date Filtering** – View activity for a selected date.
+- **API Documentation** – Explore and test backend API endpoints using Swagger UI.
+- **Cloud Deployment** – Run the application on an AWS EC2 instance.
 
 ## How It Works
 
@@ -35,9 +37,10 @@ Visitor Simulator
 | Area | Tools |
 |---|---|
 | Backend | Python, FastAPI |
-| Frontend | HTML, CSS, JavaScript |
+| Frontend | HTML |
 | Database | SQLite |
-| Cloud | AWS |
+| API Documentation | Swagger UI (OpenAPI) |
+| Cloud Deployment | AWS EC2 |
 | Version Control | Git, GitHub |
 
 ## Run Locally
@@ -49,22 +52,30 @@ git clone https://github.com/42AndBeyond/smart-visitor-counter.git
 cd smart-visitor-counter/software
 ```
 
-Create and activate a virtual environment:
+Create and activate a virtual environment (Windows CMD):
 
 ```cmd
 python -m venv backend\venv
 backend\venv\Scripts\activate
 ```
 
-Install the project dependencies, then start the backend:
+Install the required packages:
 
-```bash
+```cmd
+pip install fastapi uvicorn
+```
+
+Start the backend:
+
+```cmd
 uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open the dashboard:
+## Access the Application
 
-`http://127.0.0.1:8000/dashboard/`
+- **Dashboard:** http://127.0.0.1:8000/dashboard/
+- **Swagger UI:** http://127.0.0.1:8000/docs
+- **API Schema:** http://127.0.0.1:8000/openapi.json
 
 ---
 
