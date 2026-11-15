@@ -1,12 +1,14 @@
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Smart Visitor Counter</title>
+  <title>Smart Store Telemetry</title>
 
   <style>
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -14,9 +16,228 @@
       color: #e2e8f0;
     }
 
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .hidden { display: none !important; }
+
+    /* Authentication */
+    #authScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, #1e3a5f, #0f172a 65%);
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 430px;
+      padding: 32px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.3);
+    }
+
+    .auth-brand {
+      color: #60a5fa;
+      font-weight: bold;
+      letter-spacing: 2px;
+      font-size: 12px;
+    }
+
+    .auth-card h1 {
+      font-size: 25px;
+      margin: 12px 0 8px;
+    }
+
+    .auth-description {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .auth-card label {
+      display: block;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin: 15px 0 7px;
+    }
+
+    .auth-card input {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      color: white;
+      outline: none;
+    }
+
+    .auth-card input:focus {
+      border-color: #3b82f6;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 22px;
+      background: #2563eb;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .primary-btn:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 20px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .auth-switch button {
+      background: none;
+      border: none;
+      color: #60a5fa;
+      font-weight: bold;
+    }
+
+    .auth-error {
+      margin-top: 15px;
+      color: #fca5a5;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Application layout */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 245px;
+      flex-shrink: 0;
+      background: #111c33;
+      border-right: 1px solid #26354c;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      padding: 4px 12px 25px;
+      border-bottom: 1px solid #26354c;
+    }
+
+    .brand small {
+      color: #60a5fa;
+      letter-spacing: 1.5px;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .brand h2 {
+      color: white;
+      font-size: 19px;
+      margin: 8px 0 0;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .owner-mini {
+      padding: 20px 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #26354c;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .owner-mini strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .owner-mini small {
+      color: #94a3b8;
+      font-size: 11px;
+      display: block;
+      margin-top: 4px;
+    }
+
+    .nav-label {
+      color: #64748b;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      font-weight: bold;
+      padding: 24px 12px 10px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      padding: 12px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #94a3b8;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      background: #1e3a5f;
+      color: white;
+    }
+
+    .nav-icon {
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid #26354c;
+      padding-top: 15px;
+    }
+
+    .main-area {
+      min-width: 0;
+      flex: 1;
+    }
+
     header {
       padding: 20px 32px;
       border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
     }
 
     header small {
@@ -27,12 +248,17 @@
 
     header h1 {
       margin: 4px 0 0;
-      font-size: 26px;
+      font-size: 25px;
+    }
+
+    #status {
+      font-size: 13px;
+      color: #10b981;
     }
 
     main {
       padding: 24px 32px;
-      max-width: 1000px;
+      max-width: 1250px;
     }
 
     h2 {
@@ -68,39 +294,60 @@
       margin-top: 4px;
     }
 
-    #status {
-      float: right;
-      font-size: 13px;
-      color: #10b981;
-    }
-
     .controls {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
       align-items: center;
       margin-bottom: 4px;
     }
 
-    .controls input,
-    .controls button {
+    .controls input, .controls button {
       background: #1e293b;
       color: #e2e8f0;
       border: 1px solid #334155;
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 9px 12px;
       font-size: 14px;
     }
 
     .controls button {
-      cursor: pointer;
       background: #2563eb;
       border-color: #2563eb;
     }
 
     #mode {
       color: #94a3b8;
-      font-size: 14px;
+      font-size: 13px;
+    }
+
+    .sim-controls {
+      margin: 18px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sim-controls button {
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .start-btn { background: #16834a; }
+    .stop-btn { background: #b83232; }
+
+    .sim-controls button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    #sim-status {
+      color: #a0aec0;
+      font-size: 13px;
     }
 
     .feed {
@@ -118,9 +365,7 @@
       font-size: 14px;
     }
 
-    .event:last-child {
-      border-bottom: none;
-    }
+    .event:last-child { border-bottom: none; }
 
     .event .time {
       color: #94a3b8;
@@ -149,6 +394,7 @@
     .col {
       flex: 1;
       text-align: center;
+      min-width: 0;
     }
 
     .barbox {
@@ -164,9 +410,7 @@
       min-height: 2px;
     }
 
-    .bar.peak {
-      background: #f97316;
-    }
+    .bar.peak { background: #f97316; }
 
     .hlabel {
       font-size: 10px;
@@ -201,6 +445,7 @@
 
     .zone {
       flex: 1;
+      min-width: 0;
       min-height: 150px;
       border-radius: 10px;
       padding: 14px;
@@ -208,9 +453,9 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      border: 1px solid rgba(255,255,255,0.2);
-      transition: background 0.6s;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,.2);
+      transition: background .6s;
+      text-shadow: 0 1px 3px rgba(0,0,0,.6);
     }
 
     .zone .zname {
@@ -219,13 +464,11 @@
     }
 
     .zone .znum {
-      font-size: 34px;
+      font-size: 28px;
       font-weight: bold;
     }
 
-    .zone .zsub {
-      font-size: 13px;
-    }
+    .zone .zsub { font-size: 12px; }
 
     .doors {
       position: absolute;
@@ -277,140 +520,710 @@
         hsl(5,85%,50%)
       );
     }
+
+    /* Profile and settings */
+    .info-card {
+      max-width: 650px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .info-row {
+      padding: 15px 0;
+      border-bottom: 1px solid #334155;
+    }
+
+    .info-row:last-child { border-bottom: 0; }
+
+    .info-row small {
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .info-row strong {
+      overflow-wrap: anywhere;
+    }
+
+    .history-note {
+      color: #94a3b8;
+      font-size: 13px;
+      margin: 12px 0;
+    }
+
+    .empty-feed {
+      color: #94a3b8;
+      padding: 18px 0;
+      font-size: 14px;
+    }
+
+    @media (max-width: 800px) {
+      .sidebar { width: 205px; }
+      main { padding: 20px; }
+      header { padding: 18px 20px; }
+    }
+
+    @media (max-width: 600px) {
+      .app-layout { display: block; }
+
+      .sidebar {
+        width: 100%;
+        padding: 12px;
+      }
+
+      .brand { padding: 8px 10px 14px; }
+
+      .owner-mini {
+        padding: 12px 8px;
+      }
+
+      .nav-label { padding-top: 12px; }
+
+      .nav-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .nav-btn {
+        width: auto;
+        margin: 0;
+        padding: 9px;
+        font-size: 12px;
+      }
+
+      .sidebar-bottom { margin-top: 10px; }
+
+      main { padding: 16px; }
+      header { padding: 16px; }
+      header h1 { font-size: 20px; }
+
+      .big { font-size: 34px; }
+      .card { min-width: 135px; }
+
+      .zonemap { flex-direction: column; }
+      .zone { min-height: 115px; }
+
+      .chart { overflow-x: auto; }
+      .chart .col { min-width: 18px; }
+
+      .event { gap: 8px; font-size: 12px; }
+      .event .tag { width: 90px; }
+    }
   </style>
 </head>
 
 <body>
 
-<header>
-  <small>SMART STORE TELEMETRY</small>
-  <span id="status">connecting...</span>
-  <h1>Smart Visitor Counter</h1>
-</header>
+<!-- LOGIN / REGISTRATION -->
+<section id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">SMART STORE TELEMETRY</div>
 
-<main>
+    <div id="loginPanel">
+      <h1>Welcome back</h1>
+      <p class="auth-description">
+        Sign in to access your supermarket's private visitor dashboard.
+      </p>
 
-  <div class="controls">
-    <label>Date: <input type="date" id="day"></label>
-    <button id="todayBtn">Today (live)</button>
-    <span id="mode"></span>
-  </div>
+      <form id="loginForm">
+        <label for="loginEmail">Email address</label>
+        <input id="loginEmail" type="email" required autocomplete="email">
 
-  <!-- Simulation Control Panel -->
-  <div style="margin: 16px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-    <button onclick="controlSimulator('start')" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-      ▶ Start Simulation
-    </button>
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" required
+               autocomplete="current-password">
 
-    <button onclick="controlSimulator('stop')" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-      ⏹ Stop Simulation
-    </button>
+        <button class="primary-btn" type="submit" id="loginBtn">
+          Sign in
+        </button>
+      </form>
 
-    <span id="sim-status" style="color: #a0aec0; font-size: 14px;">Status: Idle</span>
-  </div>
-
-  <h2>Overall</h2>
-
-  <div class="row">
-    <div class="card">
-      <div class="big" id="entered">0</div>
-      <div class="label">Entered</div>
-    </div>
-
-    <div class="card">
-      <div class="big" id="exited">0</div>
-      <div class="label">Exited</div>
-    </div>
-
-    <div class="card">
-      <div class="big" id="inside">0</div>
-      <div class="label">Currently inside</div>
-    </div>
-
-    <div class="card">
-      <div class="big" id="storedwell">-</div>
-      <div class="label">Avg completed visit</div>
-    </div>
-  </div>
-
-  <h2>Store layout heatmap</h2>
-
-  <div class="floor">
-    <div class="zonemap" id="zonemap"></div>
-
-    <div class="doors">
-      <div class="door in">
-        ENTRANCE · <span id="doorIn">0</span> in
-      </div>
-
-      <div class="door out">
-        EXIT · <span id="doorOut">0</span> out
+      <div class="auth-switch">
+        New supermarket owner?
+        <button type="button" id="showRegister">Create account</button>
       </div>
     </div>
+
+    <div id="registerPanel" class="hidden">
+      <h1>Create your account</h1>
+      <p class="auth-description">
+        Register your supermarket to get your own private dashboard.
+      </p>
+
+      <form id="registerForm">
+        <label for="registerName">Owner name</label>
+        <input id="registerName" type="text" required
+               maxlength="100" autocomplete="name">
+
+        <label for="registerEmail">Email address</label>
+        <input id="registerEmail" type="email" required
+               autocomplete="email">
+
+        <label for="registerSupermarket">Supermarket name</label>
+        <input id="registerSupermarket" type="text" required
+               maxlength="150">
+
+        <label for="registerPassword">Password</label>
+        <input id="registerPassword" type="password" required
+               minlength="8" autocomplete="new-password">
+
+        <button class="primary-btn" type="submit" id="registerBtn">
+          Create account
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        Already registered?
+        <button type="button" id="showLogin">Sign in</button>
+      </div>
+    </div>
+
+    <div id="authError" class="auth-error" role="alert"></div>
   </div>
+</section>
 
-  <div class="legend">
-    <span>Quiet</span>
-    <div class="legendbar"></div>
-    <span>Busiest</span>
-    <span>(zones are compared with each other, by number of visits)</span>
+<!-- MAIN APPLICATION -->
+<div id="app" class="app-layout hidden">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <small>SMART STORE TELEMETRY</small>
+      <h2>Visitor Counter</h2>
+    </div>
+
+    <div class="owner-mini">
+      <div class="avatar" id="ownerAvatar">U</div>
+      <div>
+        <strong id="sidebarOwner">Owner</strong>
+        <small id="sidebarStore">My supermarket</small>
+      </div>
+    </div>
+
+    <div class="nav-label">WORKSPACE</div>
+
+    <div class="nav-list">
+      <button class="nav-btn active" data-view="overview">
+        <span class="nav-icon">▦</span> Overview
+      </button>
+
+      <button class="nav-btn" data-view="history">
+        <span class="nav-icon">◷</span> History
+      </button>
+
+      <button class="nav-btn" data-view="profile">
+        <span class="nav-icon">♙</span> My Profile
+      </button>
+
+      <button class="nav-btn" data-view="settings">
+        <span class="nav-icon">⚙</span> Settings
+      </button>
+    </div>
+
+    <div class="sidebar-bottom">
+      <button class="nav-btn" id="logoutBtn">
+        <span class="nav-icon">⇥</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header>
+      <div>
+        <small>SMART STORE TELEMETRY</small>
+        <h1 id="pageTitle">Overview</h1>
+      </div>
+      <span id="status">● connecting...</span>
+    </header>
+
+    <main>
+
+      <!-- OVERVIEW AND HISTORY -->
+      <section id="analyticsView">
+
+        <div class="controls">
+          <label>
+            Date:
+            <input type="date" id="day">
+          </label>
+
+          <button id="todayBtn">Today (live)</button>
+          <span id="mode"></span>
+        </div>
+
+        <div id="historyNote" class="history-note hidden">
+          Select a date to inspect the saved visitor readings for that day.
+        </div>
+
+        <!-- SIMULATOR CONTROLS -->
+        <div class="sim-controls">
+          <button id="startBtn" class="start-btn">
+            ▶ Start Simulation
+          </button>
+
+          <button id="stopBtn" class="stop-btn">
+            ⏹ Stop Simulation
+          </button>
+
+          <span id="sim-status">Status: Not started</span>
+        </div>
+
+        <h2>Overall</h2>
+
+        <div class="row">
+          <div class="card">
+            <div class="big" id="entered">0</div>
+            <div class="label">Entered</div>
+          </div>
+
+          <div class="card">
+            <div class="big" id="exited">0</div>
+            <div class="label">Exited</div>
+          </div>
+
+          <div class="card">
+            <div class="big" id="inside">0</div>
+            <div class="label">Currently inside</div>
+          </div>
+
+          <div class="card">
+            <div class="big" id="storedwell">-</div>
+            <div class="label">Avg completed visit</div>
+          </div>
+        </div>
+
+        <h2>Store layout heatmap</h2>
+
+        <div class="floor">
+          <div class="zonemap" id="zonemap"></div>
+
+          <div class="doors">
+            <div class="door in">
+              ENTRANCE · <span id="doorIn">0</span> in
+            </div>
+
+            <div class="door out">
+              EXIT · <span id="doorOut">0</span> out
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span>Quiet</span>
+          <div class="legendbar"></div>
+          <span>Busiest</span>
+          <span>(zones compared by number of visits)</span>
+        </div>
+
+        <h2>Zone insights</h2>
+        <ul class="insights" id="insights"></ul>
+
+        <h2>Hourly visitor flow</h2>
+        <div class="chart" id="chart"></div>
+        <div class="label" id="peak"></div>
+
+        <h2>Visitor events</h2>
+        <div class="feed" id="feed"></div>
+
+      </section>
+
+      <!-- PROFILE -->
+      <section id="profileView" class="hidden">
+        <h2>Owner information</h2>
+
+        <div class="info-card">
+          <div class="info-row">
+            <small>Owner name</small>
+            <strong id="profileName">-</strong>
+          </div>
+
+          <div class="info-row">
+            <small>Email address</small>
+            <strong id="profileEmail">-</strong>
+          </div>
+
+          <div class="info-row">
+            <small>Supermarket</small>
+            <strong id="profileStore">-</strong>
+          </div>
+
+          <div class="info-row">
+            <small>Account ID</small>
+            <strong id="profileId">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="settingsView" class="hidden">
+        <h2>Account settings</h2>
+
+        <div class="info-card">
+          <h3>Supermarket account</h3>
+          <p class="label">
+            Your visitor data and simulation activity are isolated
+            from other registered supermarket accounts.
+          </p>
+
+          <div class="info-row">
+            <small>Account email</small>
+            <strong id="settingsEmail">-</strong>
+          </div>
+
+          <div class="info-row">
+            <small>Supermarket name</small>
+            <strong id="settingsStore">-</strong>
+          </div>
+
+          <div class="info-row">
+            <small>Session security</small>
+            <strong>Authenticated access · 7-day token expiry</strong>
+          </div>
+
+          <button class="nav-btn" id="settingsLogout"
+                  style="color:#fca5a5;margin-top:15px;">
+            ⇥ Sign out of this account
+          </button>
+        </div>
+      </section>
+
+    </main>
   </div>
-
-  <h2>Zone insights</h2>
-  <ul class="insights" id="insights"></ul>
-
-  <h2>Hourly visitor flow</h2>
-  <div class="chart" id="chart"></div>
-  <div class="label" id="peak"></div>
-
-  <h2>Live events</h2>
-  <div class="feed" id="feed"></div>
-
-</main>
+</div>
 
 <script>
-  const sessionId = "default";
+  // API CONFIGURATION
+  const API_BASE =
+    location.port === "5500" || location.protocol === "file:"
+      ? "http://127.0.0.1:8000"
+      : location.origin;
 
+  const TOKEN_KEY = "smart_visitor_access_token";
+
+  const MAP_ORDER = ["grocery", "snacks", "freezer"];
+
+  let accessToken = localStorage.getItem(TOKEN_KEY);
+  let currentOwner = null;
   let selectedDay = null;
+  let activeView = "overview";
+  let refreshTimer = null;
 
   const dayInput = document.getElementById("day");
-  const MAP_ORDER = ["grocery", "snacks", "freezer"];
 
   function todayString() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+
+    return [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0")
+    ].join("-");
   }
 
   function formatDuration(seconds) {
-    if (seconds === null || seconds === undefined) {
-      return "-";
-    }
+    if (seconds === null || seconds === undefined) return "-";
 
-    if (seconds < 60) {
-      return Math.round(seconds) + "s";
-    }
+    if (seconds < 60) return Math.round(seconds) + "s";
 
     return Math.floor(seconds / 60) +
-      "m " +
-      Math.round(seconds % 60) +
-      "s";
+      "m " + Math.round(seconds % 60) + "s";
   }
 
   function heatColor(t) {
     const hue = 210 - 205 * t;
 
-    return "hsl(" +
-      hue +
-      ", " +
-      (70 + 15 * t) +
-      "%, " +
-      (35 + 15 * t) +
-      "%)";
+    return "hsl(" + hue + ", " +
+      (70 + 15 * t) + "%, " +
+      (35 + 15 * t) + "%)";
   }
 
+  function showAuth(error = "") {
+    accessToken = null;
+    currentOwner = null;
+    localStorage.removeItem(TOKEN_KEY);
+
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("authScreen").classList.remove("hidden");
+    document.getElementById("authError").textContent = error;
+
+    document.getElementById("loginPanel").classList.remove("hidden");
+    document.getElementById("registerPanel").classList.add("hidden");
+  }
+
+  function showApp() {
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("authError").textContent = "";
+  }
+
+  function setAuthError(message) {
+    document.getElementById("authError").textContent = message;
+  }
+
+  async function parseResponse(response) {
+    const text = await response.text();
+
+    let data = {};
+
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { detail: text };
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.detail || data.message || "Request failed: HTTP " + response.status
+      );
+    }
+
+    return data;
+  }
+
+  // PUBLIC AUTHENTICATION REQUESTS
+  async function authRequest(path, body) {
+    const response = await fetch(API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    return parseResponse(response);
+  }
+
+  // AUTHENTICATED API REQUESTS
+  async function apiRequest(path, options = {}) {
+    if (!accessToken) {
+      throw new Error("Please log in again.");
+    }
+
+    const headers = {
+      ...(options.headers || {}),
+      "Authorization": "Bearer " + accessToken
+    };
+
+    if (options.body) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const response = await fetch(API_BASE + path, {
+      ...options,
+      headers
+    });
+
+    if (response.status === 401) {
+      showAuth("Your session has expired. Please sign in again.");
+      throw new Error("Authentication expired.");
+    }
+
+    return parseResponse(response);
+  }
+
+  // LOGIN
+  document.getElementById("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    btn.textContent = "Signing in...";
+    setAuthError("");
+
+    try {
+      const result = await authRequest("/auth/login", {
+        email: document.getElementById("loginEmail").value.trim(),
+        password: document.getElementById("loginPassword").value
+      });
+
+      accessToken = result.access_token;
+      localStorage.setItem(TOKEN_KEY, accessToken);
+
+      await initializeApp();
+
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Sign in";
+    }
+  });
+
+  // REGISTRATION
+  document.getElementById("registerForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const btn = document.getElementById("registerBtn");
+    btn.disabled = true;
+    btn.textContent = "Creating account...";
+    setAuthError("");
+
+    const details = {
+      owner_name: document.getElementById("registerName").value.trim(),
+      email: document.getElementById("registerEmail").value.trim(),
+      supermarket_name: document.getElementById("registerSupermarket").value.trim(),
+      password: document.getElementById("registerPassword").value
+    };
+
+    try {
+      await authRequest("/auth/register", details);
+
+      const loginResult = await authRequest("/auth/login", {
+        email: details.email,
+        password: details.password
+      });
+
+      accessToken = loginResult.access_token;
+      localStorage.setItem(TOKEN_KEY, accessToken);
+
+      await initializeApp();
+
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Create account";
+    }
+  });
+
+  document.getElementById("showRegister").addEventListener("click", () => {
+    document.getElementById("loginPanel").classList.add("hidden");
+    document.getElementById("registerPanel").classList.remove("hidden");
+    setAuthError("");
+  });
+
+  document.getElementById("showLogin").addEventListener("click", () => {
+    document.getElementById("registerPanel").classList.add("hidden");
+    document.getElementById("loginPanel").classList.remove("hidden");
+    setAuthError("");
+  });
+
+  // OWNER PROFILE
+  async function loadProfile() {
+    const data = await apiRequest("/auth/me");
+
+    currentOwner = {
+      ...data.owner,
+      supermarket: data.supermarket
+    };
+
+    document.getElementById("sidebarOwner").textContent =
+      currentOwner.name;
+
+    document.getElementById("sidebarStore").textContent =
+      currentOwner.supermarket.name;
+
+    document.getElementById("ownerAvatar").textContent =
+      (currentOwner.name || "U").charAt(0).toUpperCase();
+
+    document.getElementById("profileName").textContent =
+      currentOwner.name;
+
+    document.getElementById("profileEmail").textContent =
+      currentOwner.email;
+
+    document.getElementById("profileStore").textContent =
+      currentOwner.supermarket.name;
+
+    document.getElementById("profileId").textContent =
+      currentOwner.id;
+
+    document.getElementById("settingsEmail").textContent =
+      currentOwner.email;
+
+    document.getElementById("settingsStore").textContent =
+      currentOwner.supermarket.name;
+  }
+
+  async function initializeApp() {
+    try {
+      await loadProfile();
+
+      selectedDay = null;
+      dayInput.max = todayString();
+      dayInput.value = todayString();
+
+      showApp();
+      changeView("overview");
+
+      await refresh();
+
+      if (refreshTimer) clearInterval(refreshTimer);
+
+      refreshTimer = setInterval(() => {
+        if (
+          accessToken &&
+          (activeView === "overview" || activeView === "history")
+        ) {
+          refresh();
+        }
+      }, 5000);
+
+    } catch (error) {
+      if (accessToken) {
+        showAuth("Unable to load your account. Please sign in again.");
+      }
+      console.error(error);
+    }
+  }
+
+  // NAVIGATION
+  function changeView(view) {
+    activeView = view;
+
+    document.querySelectorAll(".nav-btn[data-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.view === view);
+    });
+
+    document.getElementById("analyticsView").classList.toggle(
+      "hidden", view !== "overview" && view !== "history"
+    );
+
+    document.getElementById("profileView").classList.toggle(
+      "hidden", view !== "profile"
+    );
+
+    document.getElementById("settingsView").classList.toggle(
+      "hidden", view !== "settings"
+    );
+
+    const titles = {
+      overview: "Overview",
+      history: "Visitor History",
+      profile: "My Profile",
+      settings: "Settings"
+    };
+
+    document.getElementById("pageTitle").textContent = titles[view];
+
+    document.getElementById("historyNote").classList.toggle(
+      "hidden", view !== "history"
+    );
+
+    if (view === "history") {
+      document.getElementById("mode").textContent =
+        selectedDay ? "Saved readings: " + selectedDay :
+        "Select a date to view its saved readings";
+    }
+
+    if (view === "overview" || view === "history") {
+      refresh();
+    }
+  }
+
+  document.querySelectorAll(".nav-btn[data-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      changeView(button.dataset.view);
+    });
+  });
+
+  // DATE SELECTION
   dayInput.addEventListener("change", () => {
     selectedDay =
       dayInput.value && dayInput.value !== todayString()
@@ -422,37 +1235,61 @@
 
   document.getElementById("todayBtn").addEventListener("click", () => {
     selectedDay = null;
+    dayInput.value = todayString();
     refresh();
   });
 
-  // Updated simulator control function
+  // SIMULATOR CONTROL
   async function controlSimulator(action) {
     const statusEl = document.getElementById("sim-status");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
 
-    statusEl.innerText =
-      `Status: ${action === "start" ? "Starting..." : "Stopping..."}`;
+    if (!accessToken) {
+      statusEl.textContent = "Please log in first.";
+      return;
+    }
+
+    if (selectedDay !== null) {
+      statusEl.textContent =
+        "Return to Today (live) before controlling simulation.";
+      return;
+    }
+
+    startBtn.disabled = true;
+    stopBtn.disabled = true;
+
+    statusEl.textContent =
+      action === "start" ? "Status: Starting..." : "Status: Stopping...";
 
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/simulator/${action}/?session_id=${encodeURIComponent(sessionId)}`,
+      const data = await apiRequest(
+        "/api/simulator/" + action + "/",
         { method: "POST" }
       );
 
-      const data = await response.json();
+      statusEl.textContent = "Status: " + data.status;
 
-      if (!response.ok) {
-        throw new Error(data.detail || `HTTP ${response.status}`);
-      }
-
-      statusEl.innerText = `Status: ${data.status}`;
       await refresh();
 
-    } catch (err) {
-      statusEl.innerText = `Status: Error - ${err.message}`;
-      console.error("Simulator control failed:", err);
+    } catch (error) {
+      statusEl.textContent = "Status: " + error.message;
+      console.error("Simulator control failed:", error);
+    } finally {
+      startBtn.disabled = false;
+      stopBtn.disabled = false;
     }
   }
 
+  document.getElementById("startBtn").addEventListener("click", () => {
+    controlSimulator("start");
+  });
+
+  document.getElementById("stopBtn").addEventListener("click", () => {
+    controlSimulator("stop");
+  });
+
+  // HEATMAP
   function renderHeatmap(stats, analytics) {
     const map = document.getElementById("zonemap");
     map.textContent = "";
@@ -486,8 +1323,7 @@
       const sub = document.createElement("div");
       sub.className = "zsub";
       sub.textContent =
-        z.inside +
-        " inside now · avg stay " +
+        z.inside + " inside now · avg stay " +
         formatDuration(a ? a.avg_dwell_seconds : null);
 
       block.append(title, num, sub);
@@ -498,14 +1334,12 @@
     document.getElementById("doorOut").textContent = stats.exited;
   }
 
+  // HOURLY CHART
   function renderHourly(data) {
     const chart = document.getElementById("chart");
     chart.textContent = "";
 
-    const max = Math.max(
-      1,
-      ...data.hours.map(hour => hour.visitors)
-    );
+    const max = Math.max(1, ...data.hours.map(h => h.visitors));
 
     for (const h of data.hours) {
       const col = document.createElement("div");
@@ -513,9 +1347,7 @@
 
       col.title =
         String(h.hour).padStart(2, "0") +
-        ":00 - " +
-        h.visitors +
-        " visitors";
+        ":00 - " + h.visitors + " visitors";
 
       const box = document.createElement("div");
       box.className = "barbox";
@@ -525,6 +1357,7 @@
         "bar" + (h.hour === data.peak_hour ? " peak" : "");
 
       bar.style.height = (h.visitors / max * 100) + "%";
+
       box.appendChild(bar);
 
       const label = document.createElement("div");
@@ -545,16 +1378,12 @@
       const end = String((data.peak_hour + 1) % 24).padStart(2, "0");
 
       peak.textContent =
-        "Peak hour: " +
-        start +
-        ":00 - " +
-        end +
-        ":00 (" +
-        p.visitors +
-        " visitors)";
+        "Peak hour: " + start + ":00 - " + end +
+        ":00 (" + p.visitors + " visitors)";
     }
   }
 
+  // ZONE INSIGHTS
   function renderInsights(list) {
     const ul = document.getElementById("insights");
     ul.textContent = "";
@@ -566,44 +1395,75 @@
     }
   }
 
-  async function refresh() {
-    const status = document.getElementById("status");
+  // EVENTS
+  function renderEvents(events) {
+    const feed = document.getElementById("feed");
+    feed.textContent = "";
 
-    let dayQuery = `session_id=${encodeURIComponent(sessionId)}`;
-
-    if (selectedDay) {
-      dayQuery += `&day=${encodeURIComponent(selectedDay)}`;
+    if (!Array.isArray(events) || events.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-feed";
+      empty.textContent = "No visitor events recorded for this date.";
+      feed.appendChild(empty);
+      return;
     }
 
+    for (const e of events) {
+      const row = document.createElement("div");
+      row.className = "event";
+
+      const t = document.createElement("span");
+      t.className = "time";
+      t.textContent = e.time ? e.time.slice(11, 19) : "--:--:--";
+
+      const tag = document.createElement("span");
+      tag.className = "tag " + e.type;
+      tag.textContent = e.type;
+
+      const where = document.createElement("span");
+      where.textContent = e.zone || "-";
+
+      row.append(t, tag, where);
+      feed.appendChild(row);
+    }
+  }
+
+  // MAIN DASHBOARD REFRESH
+  async function refresh() {
+    if (!accessToken || !currentOwner) return;
+
+    const status = document.getElementById("status");
+
     try {
+      const params = new URLSearchParams();
+
+      if (selectedDay) {
+        params.set("day", selectedDay);
+      }
+
+      const query = params.toString();
+      const suffix = query ? "?" + query : "";
+
       if (selectedDay === null) {
         dayInput.max = todayString();
         dayInput.value = todayString();
-        document.getElementById("mode").textContent = "Showing today (live)";
+
+        document.getElementById("mode").textContent =
+          activeView === "history"
+            ? "Showing today's saved readings"
+            : "Showing today (live)";
       } else {
         document.getElementById("mode").textContent =
           "Showing history for " + selectedDay;
       }
 
-      const statsResponse = await fetch("http://127.0.0.1:8000/stats?" + dayQuery);
-
-      if (!statsResponse.ok) {
-        throw new Error(`Stats request failed: HTTP ${statsResponse.status}`);
-      }
-
-      const stats = await statsResponse.json();
+      const stats = await apiRequest("/stats" + suffix);
 
       document.getElementById("entered").textContent = stats.entered;
       document.getElementById("exited").textContent = stats.exited;
       document.getElementById("inside").textContent = stats.inside;
 
-      const analyticsResponse = await fetch("http://127.0.0.1:8000/analytics?" + dayQuery);
-
-      if (!analyticsResponse.ok) {
-        throw new Error(`Analytics request failed: HTTP ${analyticsResponse.status}`);
-      }
-
-      const analytics = await analyticsResponse.json();
+      const analytics = await apiRequest("/analytics" + suffix);
 
       document.getElementById("storedwell").textContent =
         formatDuration(analytics.store.avg_dwell_seconds);
@@ -611,58 +1471,57 @@
       renderHeatmap(stats, analytics);
       renderInsights(analytics.insights);
 
-      const hourlyResponse = await fetch("http://127.0.0.1:8000/hourly?" + dayQuery);
+      const hourly = await apiRequest("/hourly" + suffix);
+      renderHourly(hourly);
 
-      if (!hourlyResponse.ok) {
-        throw new Error(`Hourly request failed: HTTP ${hourlyResponse.status}`);
+      const eventParams = new URLSearchParams();
+      eventParams.set("limit", "10");
+
+      if (selectedDay) {
+        eventParams.set("day", selectedDay);
       }
 
-      renderHourly(await hourlyResponse.json());
-
-      const eventsResponse = await fetch(
-        "http://127.0.0.1:8000/events?limit=10&" + dayQuery
+      const events = await apiRequest(
+        "/events?" + eventParams.toString()
       );
 
-      if (!eventsResponse.ok) {
-        throw new Error(`Events request failed: HTTP ${eventsResponse.status}`);
-      }
-
-      const events = await eventsResponse.json();
-      const feed = document.getElementById("feed");
-
-      feed.textContent = "";
-
-      for (const e of events) {
-        const row = document.createElement("div");
-        row.className = "event";
-
-        const t = document.createElement("span");
-        t.className = "time";
-        t.textContent = e.time.slice(11, 19);
-
-        const tag = document.createElement("span");
-        tag.className = "tag " + e.type;
-        tag.textContent = e.type;
-
-        const where = document.createElement("span");
-        where.textContent = e.zone;
-
-        row.append(t, tag, where);
-        feed.appendChild(row);
-      }
+      renderEvents(events);
 
       status.textContent = "● live";
       status.style.color = "#10b981";
 
     } catch (error) {
-      status.textContent = "● offline";
-      status.style.color = "#ef4444";
+      if (error.message !== "Authentication expired.") {
+        status.textContent = "● offline";
+        status.style.color = "#ef4444";
+      }
+
       console.error("Dashboard refresh failed:", error);
     }
   }
 
-  refresh();
-  setInterval(refresh, 2000);
+  // LOGOUT
+  async function logout() {
+    try {
+      if (accessToken) {
+        await apiRequest("/auth/logout", { method: "POST" });
+      }
+    } catch (error) {
+      console.error("Logout request:", error);
+    } finally {
+      showAuth("You have been signed out.");
+    }
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("settingsLogout").addEventListener("click", logout);
+
+  // APPLICATION STARTUP
+  if (accessToken) {
+    initializeApp();
+  } else {
+    showAuth();
+  }
 </script>
 
 </body>
