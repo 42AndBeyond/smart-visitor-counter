@@ -370,12 +370,7 @@
 </main>
 
 <script>
-  let sessionId = localStorage.getItem("visitor_session_id");
-
-  if (!sessionId) {
-    sessionId = "user_" + Math.random().toString(36).substring(2, 9);
-    localStorage.setItem("visitor_session_id", sessionId);
-  }
+  const sessionId = "default";
 
   let selectedDay = null;
 
@@ -440,7 +435,7 @@
 
     try {
       const response = await fetch(
-        `/api/simulator/${action}/?session_id=${encodeURIComponent(sessionId)}`,
+        `http://127.0.0.1:8000/api/simulator/${action}/?session_id=${encodeURIComponent(sessionId)}`,
         { method: "POST" }
       );
 
@@ -591,7 +586,7 @@
           "Showing history for " + selectedDay;
       }
 
-      const statsResponse = await fetch("/stats?" + dayQuery);
+      const statsResponse = await fetch("http://127.0.0.1:8000/stats?" + dayQuery);
 
       if (!statsResponse.ok) {
         throw new Error(`Stats request failed: HTTP ${statsResponse.status}`);
@@ -603,7 +598,7 @@
       document.getElementById("exited").textContent = stats.exited;
       document.getElementById("inside").textContent = stats.inside;
 
-      const analyticsResponse = await fetch("/analytics?" + dayQuery);
+      const analyticsResponse = await fetch("http://127.0.0.1:8000/analytics?" + dayQuery);
 
       if (!analyticsResponse.ok) {
         throw new Error(`Analytics request failed: HTTP ${analyticsResponse.status}`);
@@ -617,7 +612,7 @@
       renderHeatmap(stats, analytics);
       renderInsights(analytics.insights);
 
-      const hourlyResponse = await fetch("/hourly?" + dayQuery);
+      const hourlyResponse = await fetch("http://127.0.0.1:8000/hourly?" + dayQuery);
 
       if (!hourlyResponse.ok) {
         throw new Error(`Hourly request failed: HTTP ${hourlyResponse.status}`);
@@ -626,7 +621,7 @@
       renderHourly(await hourlyResponse.json());
 
       const eventsResponse = await fetch(
-        "/events?limit=10&" + dayQuery
+        "http://127.0.0.1:8000/events?limit=10&" + dayQuery
       );
 
       if (!eventsResponse.ok) {

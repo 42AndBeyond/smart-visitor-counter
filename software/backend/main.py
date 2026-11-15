@@ -9,11 +9,14 @@ import subprocess
 import sys
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 
 app = FastAPI()
+
+app.add_middleware(CORSMiddleware, allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 ZONES = ["grocery", "snacks", "freezer"]
 EVENT_TYPES = ["ENTRY", "EXIT", "ZONE_ENTER", "ZONE_LEAVE"]
@@ -495,8 +498,8 @@ def start_simulator(
             session_id
         ],
         cwd=str(sim_path.parent),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
     )
 
     simulator_processes[session_id] = proc
@@ -518,7 +521,13 @@ def stop_simulator(
         session_id in simulator_processes
         and simulator_processes[session_id].poll() is None
     ):
-        simulator_processes[session_id].terminate()
+        proc = simulator_processes[session_id]
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
         del simulator_processes[session_id]
 
         return {"status": "stopped"}
